@@ -1,0 +1,33 @@
+# Emacs-generated files
+*~
+*.elc
+auto-save-list/
+auto-saves/
+backups/
+config_backup/
+eshell/
+img/
+transient/
+tutorial/
+url/
+recentf
+places
+tramp
+history
+migemo-pattern
+
+# OS files
+.DS_Store
+.org-id-location
+
+# Elpaca (or straight / package manager dirs)
+elpa/
+elpaca/
+builds/
+repos/
+
+# Org-roam database
+org-roam.db
+
+# Other local-only config
+custom.el
