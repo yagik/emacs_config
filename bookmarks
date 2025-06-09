@@ -1,0 +1,11 @@
+;;;; Emacs Bookmark Format Version 1;;;; -*- coding: utf-8-emacs; mode: lisp-data -*-
+;;; This format is meant to be slightly human-readable;
+;;; nevertheless, you probably don't want to edit it.
+;;; -*- End Of Bookmark File Format Version Stamp -*-
+(("20250607154554-家の事_本部.org"
+ (filename . "~/Documents/org-roam/20250607154554-家の事_本部.org")
+ (front-context-string . "\n\n:[[id:3685D87A")
+ (rear-context-string . "テナンス記録]]\n\n* 納税関係")
+ (position . 175)
+ (last-modified 26692 11546 72354 0))
+)
