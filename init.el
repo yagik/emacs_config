@@ -306,3 +306,5 @@
 (use-package symbol-overlay
   :ensure t
   :bind ("M-i" . symbol-overlay-put)) ; Alt + i でハイライトのON/OFF
+
+;;更新を確認するテスト
