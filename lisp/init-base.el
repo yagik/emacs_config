@@ -59,6 +59,14 @@
   (add-hook mode (lambda () (display-line-numbers-mode -1))))
 (setq-default display-line-numbers-width 3)
 
+
+;; スクロールを滑らかにする (Emacs 29以降の標準機能)
+(pixel-scroll-precision-mode 1)
+
+;; 日本語入力中の挙動を安定させる
+(setq redisplay-dont-pause t)
+
+
 ;; 防御的設定 (ファイル管理)
 (let ((backup-dir (expand-file-name "backups/" user-emacs-directory))
       (auto-save-dir (expand-file-name "auto-saves/" user-emacs-directory)))
