@@ -1,5 +1,7 @@
 ;;; init-org.el --- Org, PDF, Writing tools -*- lexical-binding: t -*-
 
+(global-set-key (kbd "C-c l") 'org-store-link)
+
 ;; 日本語検索 (Migemo)
 (use-package migemo
   :if (executable-find "cmigemo")
@@ -47,15 +49,34 @@
   (setq pdf-view-continuous t)
   (add-hook 'pdf-view-mode-hook (lambda () (line-number-mode -1))))
 
-;; PDF表示ルール（サイドウィンドウ強制）
+
+;; 1. Org-mode側のルールを矯正する
+;;    デフォルトだと「ファイルリンクは別窓で開く」設定になっているため、
+;;    これを「find-file (現在の窓で開く)」に強制変更します。
+(setq org-link-frame-setup '((file . find-file)))
+
+;; 2. Emacs全体のルールを強制適用するスイッチ
 (setq switch-to-buffer-obey-display-actions t)
-(add-to-list 'display-buffer-alist
-             '("\\.pdf\\'"
-               (display-buffer-in-side-window)
-               (side . right)
-               (slot . 0)
-               (window-width . 0.5)
-               (preserve-size . (t . t))))
+
+;; 3. ファイルの種類ごとの表示ルール (display-buffer-alist)
+(setq display-buffer-alist
+      '(
+        ;; 【ルールA】 PDFファイル (.pdf)
+        ;; → 右側のサイドウィンドウに隔離して表示
+        ("\\.pdf\\'"
+         (display-buffer-in-side-window)
+         (side . right)
+         (slot . 0)
+         (window-width . 0.5)
+         (preserve-size . (t . t)))
+
+        ;; 【ルールB】 Orgファイル (.org)
+        ;; → Denoteなども含め、絶対に「今のウィンドウ」で開く
+        ("\\.org$"
+         (display-buffer-same-window)
+         (inhibit-same-window . nil)) ; 「同じ窓禁止」フラグを明示的にOFFにする
+       ))
+
 
 (use-package org-pdftools
   :ensure t
