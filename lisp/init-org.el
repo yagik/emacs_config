@@ -67,8 +67,8 @@
          (display-buffer-in-side-window)
          (side . right)
          (slot . 0)
-         (window-width . 0.5)
-         (preserve-size . (t . t)))
+         (window-width . 0.5))
+         ;;(preserve-size . (t . t))
 
         ;; 【ルールB】 Orgファイル (.org)
         ;; → Denoteなども含め、絶対に「今のウィンドウ」で開く
