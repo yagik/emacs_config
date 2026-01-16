@@ -49,15 +49,32 @@
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
 
-;; 行番号表示の設定
+
+;; 行番号表示に関する設定
 (global-display-line-numbers-mode t)
-(dolist (mode '(dashboard-mode-hook
-                vterm-mode-hook
-                pdf-view-mode-hook
-                treemacs-mode-hook
-                eshell-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode -1))))
-(setq-default display-line-numbers-width 3)
+
+;; 2. 行番号のタイプ設定
+;; 't (絶対行) が一般的ですが、'relative (相対行) も根強い人気があります
+(setq display-line-numbers-type t)
+
+;; 3. 桁数が増えても横にガタつかないようにする（必須設定）
+(setq display-line-numbers-width-start t)
+
+;; 4. 【おすすめ】行番号のフォントだけ固定幅にする
+;; プロポーショナルフォントを全体で使っていても、行番号のズレを防げます
+(set-face-attribute 'line-number nil :inherit 'fixed-pitch)
+
+;; 5. 特定のモード（ミニバッファやヘルプなど）では表示しない
+(dolist (hook '(help-mode-hook
+                info-mode-hook
+                custom-mode-hook))
+  (add-hook hook (lambda () (display-line-numbers-mode -1))))
+
+
+
+
+
+
 
 
 ;; スクロールを滑らかにする (Emacs 29以降の標準機能)

@@ -7,6 +7,13 @@
   (setq catppuccin-flavor 'mocha)
   (load-theme 'catppuccin t))
 
+
+(use-package savehist
+  :init
+  (savehist-mode 1)
+  (setq history-length 100))
+
+
 ;; モダンUI & 補完 (Vertico, Consult)
 (use-package vertico :init (vertico-mode 1))
 (use-package marginalia :init (marginalia-mode 1))
