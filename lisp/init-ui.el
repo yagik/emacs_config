@@ -5,7 +5,29 @@
   :ensure t
   :config
   (setq catppuccin-flavor 'mocha)
+  (setq catppuccin-accent 'blue)
   (load-theme 'catppuccin t))
+
+;; Org Headline colors (Spacemacs Dark-ish)
+(defun my/org-headline-colors-spacemacs-dark ()
+  "Set Org headline colors only (Spacemacs Dark-ish)."
+  (interactive)
+  ;; 文字色だけ変える（:weight や :height は触らない）
+  (set-face-attribute 'org-level-1 nil :foreground "#4f97d7")
+  (set-face-attribute 'org-level-2 nil :foreground "#2d9574")
+  (set-face-attribute 'org-level-3 nil :foreground "#67b11d")
+  (set-face-attribute 'org-level-4 nil :foreground "#b1951d")
+  (set-face-attribute 'org-level-5 nil :foreground "#a31db1")
+  (set-face-attribute 'org-level-6 nil :foreground "#bc6ec5")
+  (set-face-attribute 'org-level-7 nil :foreground "#7590db")
+  (set-face-attribute 'org-level-8 nil :foreground "#4f97d7"))
+
+;; 起動時に適用（Orgがロードされた後）
+(with-eval-after-load 'org
+  (my/org-headline-colors-spacemacs-dark))
+
+;; テーマを切り替えた後にも再適用（重要）
+(add-hook 'after-load-theme-hook #'my/org-headline-colors-spacemacs-dark)
 
 
 (use-package savehist

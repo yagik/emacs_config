@@ -11,15 +11,23 @@
   (setq migemo-dictionary "/opt/homebrew/share/migemo/utf-8/migemo-dict")
   (migemo-init))
 
+
 ;; Org-mode 外見設定関数
 (defun my/org-mode-visual-settings ()
   "Org-modeの本文をヒラギノに、表などを等幅にする"
   (face-remap-add-relative 'default :family "Hiragino Kaku Gothic Pro" :height 180)
-  (set-face-attribute 'org-table nil :family "PlemolJP" :height 160)
+  (set-face-attribute 'org-table nil :family "PlemolJP" :height 170)
   (set-face-attribute 'org-block nil :family "PlemolJP" :height 160)
   (set-face-attribute 'org-code nil :family "PlemolJP" :height 160)
   (set-face-attribute 'org-verbatim nil :family "PlemolJP" :height 160)
-  (setq-local line-spacing 0.2))
+
+  ;; 行番号のフォントをPlemolJPに指定。これで桁がずれなくなる
+  (face-remap-add-relative 'line-number :family "PlemolJP" :height 160)
+
+  ;; 行間の設定
+  (setq-local line-spacing 0.15))
+
+
 
 ;; Org-mode 本体
 (use-package org
@@ -90,11 +98,26 @@
 
 (use-package org-modern
   :hook (org-mode . org-modern-mode)
-  :custom (org-modern-table nil))
+  :custom (org-modern-star nil)
+  (org-modern-table nil))
+
+(use-package org-superstar
+  :ensure t
+  :after org
+  :hook
+  (org-mode . org-superstar-mode)
+  :custom
+  ;; * を消して bullet に置き換える（Spacemacs/Doomっぽさが出る）
+  (org-superstar-remove-leading-stars t)
+
+  ;; ここが “味” の部分：見出しレベルごとの bullet
+  (setq org-superstar-headline-bullets-list '("◉" "○" "✸" "✿" "•" "·" "·"))  
+  ;; 箇条書きの点も変えたい場合（不要ならこの行は消してOK）
+  (org-superstar-item-bullet-alist '((?+ . ?•) (?- . ?•) (?* . ?•))))
 
 (use-package denote
   :hook (dired-mode . denote-dired-mode)
-  :custom
+  :custom 
   (denote-directory "~/Documents/denote")
   (denote-file-type 'org)
   :config (denote-rename-buffer-mode 1)
