@@ -6,13 +6,7 @@
   :bind (("C-x g" . magit-status)))
 
 
-;; 2. 【自家製】VBA/Basic用カラー設定 (パッケージ不要)
-;; 外部サーバーからダウンロードせず、Emacsの標準機能だけで色を付けます。
-;; これにより「Package unavailable」エラーを根本的に回避します。
-
-
 ;; 3. 洗練された補完 UI (Corfu)
-;; 入力中に邪魔にならない程度に候補を表示してくれる、モダンな補完ツールです
 (use-package corfu
   :ensure t
   :custom
@@ -21,7 +15,10 @@
   (corfu-auto-prefix 2)          ; 2文字打ったら表示
   (corfu-quit-at-boundary nil)   ; スペースを打っても消えない
   :init
-  (global-corfu-mode))
+  (global-corfu-mode 1)
+  :hook
+  (org-mode . (lambda ()        ; Org-modeではOff
+                (setq-local corfu-auto nil))))
 
 ;; 4. 構文チェックの標準化 (Flymake)
 ;; Emacs標準の機能を使って、コードの書き間違いを警告します
@@ -46,6 +43,8 @@
 (use-package symbol-overlay
   :ensure t
   :bind ("M-i" . symbol-overlay-put))
+
+(require 'vba-mode)
 
 (provide 'init-dev)
 ;;; init-dev.el ends here
