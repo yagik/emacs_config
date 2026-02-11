@@ -34,7 +34,8 @@
   :hook (org-mode . my/org-mode-visual-settings)
   :custom
   (org-startup-indented t)
-  (org-hide-emphasis-markers t))
+  (org-hide-emphasis-markers t)
+  (org-startup-with-inline-images t))
 
 (use-package olivetti
   :hook (org-mode . olivetti-mode)
@@ -55,6 +56,7 @@
   (setq pdf-view-use-scaling t)
   (setq-default pdf-view-display-size 'fit-width)
   (setq pdf-view-continuous t)
+  (add-hook 'pdf-view-mode-hook (lambda () (display-line-numbers-mode -1)))
   (add-hook 'pdf-view-mode-hook (lambda () (line-number-mode -1))))
 
 
@@ -91,10 +93,90 @@
   :hook (org-mode . org-pdftools-setup-link)
   :config (org-pdftools-setup-link))
 
-;; Org周辺ツール
+
+
+;;; ================================================================
+;;; Org-download & DND: 画像は自動、その他はメニュー選択
+;;; ================================================================
 (use-package org-download
+  :ensure t
   :after org
-  :config (org-download-enable))
+  :config
+  (require 'cl-lib)
+  (require 'org-attach)
+
+  ;; --- 1. org-download の設定（画像専用） ---
+  (setq org-download-method 'directory)
+  (setq-default org-download-image-dir "./images")
+  (setq org-download-heading-alist nil)
+  (setq org-download-timestamp "%Y%m%d-%H%M%S_")
+  (setq org-download-annotate-function
+        (lambda (_link) "#+ATTR_ORG: :width 400\n"))
+
+  ;; --- 2. 画像判定用の正規表現 ---
+  (defconst my/org-dnd-image-regexp
+    (concat "^file:.*\\."
+            "\\(?:png\\|jpe?g\\|gif\\|webp\\|svg\\|bmp\\|tiff?\\)"
+            "\\(?:[?#].*\\)?$")
+    "Drag & drop で画像として扱う file: URI の正規表現。")
+
+  ;; --- 3. 画像以外の時に出すメニュー処理（重複チェック追加） ---
+  (defun my/org-dnd-nonimage-menu (file)
+    "非画像ファイルDND時に、どうするかメニューで尋ねる"
+    (let* ((choices '("Attach (to ./data)" "Insert Link (Relative)" "Open File"))
+           (choice (completing-read (format "Action for %s: " (file-name-nondirectory file))
+                                    choices nil t)))
+      (pcase choice
+        ("Attach (to ./data)"
+         ;; A. Attach: dataフォルダにコピー（重複時はスキップ）
+         (let* ((basename (file-name-nondirectory file))
+                ;; 添付先フォルダを取得（なければ作成される）
+                (attach-dir (org-attach-dir t)) 
+                (target-file (expand-file-name basename attach-dir)))
+           
+           (if (file-exists-p target-file)
+               ;; 既にファイルがある場合: コピーせず通知だけする
+               (message "File '%s' already exists in data folder. Skipping copy." basename)
+             
+             ;; ない場合: コピーを実行
+             (org-attach-attach file nil 'cp)))
+
+         ;; どっちのケースでもリンクを書き込む
+         (insert (format "[[attachment:%s]]\n" (file-name-nondirectory file))))
+        
+        ("Insert Link (Relative)"
+         ;; B. Link: 相対リンク
+         (let* ((base (or (and (buffer-file-name) (file-name-directory (buffer-file-name)))
+                          default-directory))
+                (rel  (file-relative-name file base)))
+           (insert (format "[[file:%s]]\n" rel))))
+        
+        ("Open File"
+         ;; C. Open: 開く
+         (find-file file)))))
+
+  ;; --- 4. 非画像用ハンドラ ---
+  (defun my/org-dnd-handle-nonimage (uri _action)
+    (let ((file (dnd-get-local-file-name uri t)))
+      (when (and file (file-exists-p file))
+        (my/org-dnd-nonimage-menu file)
+        'private)))
+
+  ;; --- 5. セットアップ ---
+  (defun my/org-dnd-setup ()
+    (org-download-enable)
+    (let ((case-fold-search t))
+      (setq-local dnd-protocol-alist
+                  (append
+                   (list
+                    (cons my/org-dnd-image-regexp #'org-download-dnd)
+                    (cons "^file:"                #'my/org-dnd-handle-nonimage))
+                   dnd-protocol-alist))))
+
+  (add-hook 'org-mode-hook #'my/org-dnd-setup))
+
+;;--------Org-download ends here---
+
 
 (use-package org-modern
   :hook (org-mode . org-modern-mode)
@@ -123,6 +205,12 @@
   :config (denote-rename-buffer-mode 1)
   :bind (("C-c n n" . denote)
          ("C-c n f" . denote-open-or-create)))
+
+
+;; EPUB閲覧用（警告消去のため）
+(use-package nov :ensure t)
+;; DjVu閲覧用（警告消去のため）
+(use-package djvu :ensure t)
 
 (provide 'init-org)
 ;;; init-org.el ends here

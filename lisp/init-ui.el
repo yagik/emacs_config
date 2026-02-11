@@ -115,5 +115,15 @@
     (kill-ring-save (line-beginning-position) (line-end-position))))
 (global-set-key (kbd "s-c") 'my/copy-line-or-region)
 
+
+;; 選択範囲を「意味のまとまり」で段階的に広げる
+(use-package expand-region
+  :ensure t
+  :bind (("C-=" . er/expand-region)   ; 候補1：Control + =
+         ("s-e" . er/expand-region)   ; 候補2：Command + e (Expand)
+         ("C--" . er/contract-region) ; 狭める方は Control + -
+         ("s-E" . er/contract-region))) ; 狭める方は Command + Shift + e
+
+
 (provide 'init-ui)
 ;;; init-ui.el ends here
