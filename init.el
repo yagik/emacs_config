@@ -6,8 +6,12 @@
 ;; 2. 各機能ファイルを順番に読み込む
 ;;    もし特定のエラーが出たら、その行の先頭に ; をつけてコメントアウトすれば無効化できます。
 
+(use-package ansi-color
+  :ensure nil) ;; 標準ライブラリなので ensure は不要
+
 (require 'init-base)  ; 基礎設定 (Package, Font, Mac, etc)
 (require 'init-ui)    ; UI・操作 (Vertico, Theme, Window)
+(require 'init-keybindings)  ; Leader Key関連
 (require 'init-org)   ; 執筆・思考 (Org, PDF, Denote)
 (require 'init-dev)   ; 開発 (Magit, Eglot, Treesit)
 

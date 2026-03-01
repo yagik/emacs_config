@@ -15,10 +15,13 @@
 (setq mac-command-modifier 'super)
 (setq mac-option-modifier 'meta)
 
-;; Homebrewのパスを通す
+;; Homebrew等のパスを通す
 (when (eq system-type 'darwin)
   (setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
-  (add-to-list 'exec-path "/opt/homebrew/bin"))
+  (add-to-list 'exec-path "/opt/homebrew/bin")
+  (add-to-list 'exec-path "/usr/local/bin"))
+
+
 
 ;; カッコの閉じ忘れ・視認性対策
 (electric-pair-mode 1)   ; カッコを自動で閉じる
@@ -52,8 +55,6 @@
 
 ;; 行番号表示に関する設定
 (global-display-line-numbers-mode t)
-
-;; 2. 行番号のタイプ設定
 ;; 't (絶対行) が一般的ですが、'relative (相対行) も根強い人気があります
 (setq display-line-numbers-type t)
 
@@ -74,12 +75,6 @@
 
 
 
-
-
-
-;; スクロールを滑らかにする (Emacs 29以降の標準機能)
-(pixel-scroll-precision-mode 1)
-
 ;; 日本語入力中の挙動を安定させる
 (setq redisplay-dont-pause t)
 
@@ -92,6 +87,14 @@
   (setq backup-directory-alist `((".*" . ,backup-dir))
         auto-save-file-name-transforms `((".*" ,auto-save-dir t))
         create-lockfiles nil))
+
+
+;; 行の移動の挙動の設定
+;; スクロールを滑らかにする (Emacs 29以降の標準機能)
+(pixel-scroll-precision-mode t)
+(setq scroll-conservatively 101)
+(setq scroll-margin 0)
+(setq maximum-scroll-margin 0.1) ; 画面全体の10%以上はマージンを作らない
 
 (provide 'init-base)
 ;;; init-base.el ends here

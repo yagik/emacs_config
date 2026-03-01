@@ -1,12 +1,12 @@
 ;;; init-dev.el --- Programming & Development -*- lexical-binding: t -*-
 
-;; 1. Git連携 (Magit)
+;; Git連携 (Magit)
 (use-package magit
   :ensure t
   :bind (("C-x g" . magit-status)))
 
 
-;; 3. 洗練された補完 UI (Corfu)
+;; 洗練された補完 UI (Corfu)
 (use-package corfu
   :ensure t
   :custom
@@ -20,11 +20,11 @@
   (org-mode . (lambda ()        ; Org-modeではOff
                 (setq-local corfu-auto nil))))
 
-;; 4. 構文チェックの標準化 (Flymake)
+;; 構文チェックの標準化 (Flymake)
 ;; Emacs標準の機能を使って、コードの書き間違いを警告します
 (add-hook 'prog-mode-hook 'flymake-mode)
 
-;; 5. Tree-sitter & Eglot (以前の設定を維持)
+;; Tree-sitter & Eglot (以前の設定を維持)
 (use-package treesit
   :ensure nil
   :if (boundp 'treesit-font-lock-level)
@@ -39,12 +39,29 @@
   :config
   (keymap-set eglot-mode-map "s-." 'eglot-code-actions))
 
-;; 6. 変数のハイライト
+;; 変数のハイライト
 (use-package symbol-overlay
   :ensure t
   :bind ("M-i" . symbol-overlay-put))
 
 (require 'vba-mode)
+
+
+;;------------------------------
+;; ESS Emacs Speaks Statistics)
+;;------------------------------
+(use-package ess
+  :ensure t
+  :init
+  (require 'ess-site)
+  :config
+  ;; 起動時に作業ディレクトリをいちいち聞かれないようにする（ストレス緩和）
+  (setq ess-ask-for-project-root nil))
+
+
+
+
+
 
 (provide 'init-dev)
 ;;; init-dev.el ends here

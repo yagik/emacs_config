@@ -35,6 +35,17 @@
   (savehist-mode 1)
   (setq history-length 100))
 
+(use-package which-key
+  :ensure nil  ; ★Emacs 30では組み込みなので、ダウンロード不要
+  :init
+  (which-key-mode 1)
+  :config
+  ;; 0.5秒待ってからガイドを表示（一瞬で出るとチカチカするので、このくらいが快適です）
+  (setq which-key-idle-delay 0.05)
+  ;; ミニバッファの横に余裕を持って表示
+  (setq which-key-side-window-location 'bottom))
+
+
 
 ;; モダンUI & 補完 (Vertico, Consult)
 (use-package vertico :init (vertico-mode 1))
@@ -68,8 +79,6 @@
   (dashboard-set-file-icons t)
   :config (dashboard-setup-startup-hook))
 
-;; 編集効率化とace-window
-(use-package which-key :init (which-key-mode 1))
 
 (use-package undo-fu
   :ensure t
@@ -123,6 +132,93 @@
          ("s-e" . er/expand-region)   ; 候補2：Command + e (Expand)
          ("C--" . er/contract-region) ; 狭める方は Control + -
          ("s-E" . er/contract-region))) ; 狭める方は Command + Shift + e
+
+
+
+;; -----------------------------------------------------------------------------
+;; Google日本語(日：青) + Mac標準ABC(英：橙) の自動切替
+;; -----------------------------------------------------------------------------
+(use-package sis
+  :ensure t
+  :config
+  (sis-ism-lazyman-config
+   "com.apple.keylayout.US"
+   "com.google.inputmethod.Japanese.base")
+
+  ;; ★ここが本命：リーダーキーを「prefix override」に追加
+  (add-to-list 'sis-prefix-override-keys "C-;")
+
+  ;; prefix key を英語に落とす機能は respect-mode が担当
+  (sis-global-respect-mode t)
+
+  ;; （任意）カーソル色
+  (setq sis-cursor-color-indicator '("#FF9500" "#4285F4" "red"))
+  (sis-global-cursor-color-mode t))
+
+;;---------
+;; 英語関係
+;;---------
+;
+;; --- osx-dictionary (単語検索用) ---
+(use-package osx-dictionary
+  :ensure t
+  :bind (("C-c d" . osx-dictionary-search-pointer)    ; カーソル下の単語を検索
+         ("C-c i" . osx-dictionary-search-input)))    ; 入力して検索
+
+;; ;; --- google-translate (文章翻訳用) ---
+;; ;; --- 最近はgo-translateが主流と
+;; (use-package google-translate
+;;   :ensure t
+;;   :bind (("C-c t" . google-translate-at-point)        ; カーソル下の単語/選択範囲を翻訳
+;;          ("C-c T" . google-translate-query-translate)); 入力して翻訳
+;;   :config
+;;   ;; 日本語への翻訳をデフォルトにする設定
+;;   (setq google-translate-default-source-language "en")
+;;   (setq google-translate-default-target-language "ja"))
+
+;; (use-package gt
+;;   :ensure t
+;;   :bind (("C-c t" . gt-do-translate)) ; 翻訳実行
+;;   :config
+;;   ;; デフォルトの翻訳設定を定義
+;;   (setq gt-default-translator
+;;         (gt-translator
+;;          ;; 翻訳の向き（自動判別しつつ日英・英日を切り替え）
+;;          :taker   (gt-taker :langs '(en ja) :prompt t)
+;;          ;; エンジン（まずはGoogle翻訳。DeepL等も追加可能）
+;;          :engines (list (gt-google-engine))
+;;          ;; 出力先（バッファに表示。ポップアップが好きなら gt-posframe-render も可）
+;;          :render  (gt-buffer-render))))
+
+(use-package posframe
+  :ensure t
+  :demand t)
+
+(use-package gt
+  :ensure t
+  :bind (("C-c t" . gt-translate))
+  :config
+  (setq gt-langs '(en ja))
+  (require 'gt-render-posframe)
+  (require 'gt-engine-google)
+
+  (setq gt-default-translator
+        (gt-translator
+         ;; :text 'buffer と :pick 'paragraph の組み合わせで
+         ;; 「選択範囲があればそれ、なければ段落」を自動取得します
+         :taker   (gt-taker :text 'buffer :pick 'region-or-paragraph :prompt 'disable)
+         :engines (list (gt-google-engine))
+         :render  (gt-posframe-render))))
+
+
+;;----
+;; カーソル位置を光らせる（ジャンプ後の見失い防止）
+(use-package beacon
+  :ensure t
+  :init (beacon-mode 1)
+  :custom (beacon-color "#ce7e8e"))
+;; Diredモードの時はbeacon（光るエフェクト）をオフにする
+(add-hook 'dired-mode-hook (lambda () (beacon-mode -1)))
 
 
 (provide 'init-ui)
