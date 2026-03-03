@@ -1,0 +1,905 @@
+#+TITLE: My Emacs config
+#+AUTHOR: Toshi Kasuga
+#+STARTUP: folded
+
+* init-base.el
+#+begin_src elisp
+;; 起動高速化とMac最適化
+(setq gc-cons-threshold (* 100 1024 1024))
+(add-hook 'emacs-startup-hook (lambda () (setq gc-cons-threshold (* 2 1024 1024))))
+
+(set-language-environment "Japanese")
+(prefer-coding-system 'utf-8)
+
+;; ウインドウサイズと位置 (M4 MacBook Pro用)
+(setq initial-frame-alist '((width . 120) (height . 50) (top . 50) (left . 100)))
+(setq default-frame-alist '((width . 120) (height . 50)))
+
+;; Macのキー設定
+(setq mac-command-modifier 'super)
+(setq mac-option-modifier 'meta)
+
+;; Homebrew等のパスを通す
+(when (eq system-type 'darwin)
+  (setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
+  (add-to-list 'exec-path "/opt/homebrew/bin")
+  (add-to-list 'exec-path "/usr/local/bin"))
+
+;; カッコの閉じ忘れ・視認性対策
+(electric-pair-mode 1)   ; カッコを自動で閉じる
+(show-paren-mode 1)      ; 対応するカッコを光らせる
+(setq show-paren-delay 0)
+
+(use-package rainbow-delimiters
+  :ensure t
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+;;パッケージ管理 (標準 package.el)
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(package-initialize)
+
+(require 'use-package)
+(setq use-package-always-ensure t)
+
+;; UIのノイズをカット
+(setq inhibit-startup-message t)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+
+
+(use-package savehist
+  :init
+  (savehist-mode 1)
+  (setq history-length 100))
+
+
+;; 行番号表示に関する設定
+(global-display-line-numbers-mode t)
+;; 't (絶対行) が一般的ですが、'relative (相対行) も根強い人気があります
+(setq display-line-numbers-type t)
+
+;; 3. 桁数が増えても横にガタつかないようにする（必須設定）
+(setq display-line-numbers-width-start t)
+
+;; 4. 【おすすめ】行番号のフォントだけ固定幅にする
+;; プロポーショナルフォントを全体で使っていても、行番号のズレを防げます
+(set-face-attribute 'line-number nil :inherit 'fixed-pitch)
+
+;; 5. 特定のモード（ミニバッファやヘルプなど）では表示しない
+(dolist (hook '(help-mode-hook
+                info-mode-hook
+                custom-mode-hook))
+  (add-hook hook (lambda () (display-line-numbers-mode -1))))
+
+;; 日本語入力中の挙動を安定させる
+(setq redisplay-dont-pause t)
+
+;; 防御的設定 (ファイル管理)
+(let ((backup-dir (expand-file-name "backups/" user-emacs-directory))
+      (auto-save-dir (expand-file-name "auto-saves/" user-emacs-directory)))
+  (unless (file-exists-p backup-dir) (make-directory backup-dir t))
+  (unless (file-exists-p auto-save-dir) (make-directory auto-save-dir t))
+  (setq backup-directory-alist `((".*" . ,backup-dir))
+        auto-save-file-name-transforms `((".*" ,auto-save-dir t))
+        create-lockfiles nil))
+
+
+;; 行の移動の挙動の設定
+;; スクロールを滑らかにする (Emacs 29以降の標準機能)
+(pixel-scroll-precision-mode t)
+(setq scroll-conservatively 101)
+(setq scroll-margin 0)
+(setq maximum-scroll-margin 0.1) ; 画面全体の10%以上はマージンを作らない
+#+end_src
+
+* Font and theme
+#+begin_src elisp
+;;フォントと外見の基本設定
+(defun my/setup-fonts ()
+  (interactive)
+  (when (member "PlemolJP" (font-family-list))
+    (set-face-attribute 'default nil :family "PlemolJP" :height 170)))
+(my/setup-fonts)
+
+;; テーマ設定
+(use-package catppuccin-theme
+  :ensure t
+  :config
+  (setq catppuccin-flavor 'mocha)
+  (setq catppuccin-accent 'blue)
+  (load-theme 'catppuccin t))
+
+;; Org Headline colors (Spacemacs Dark-ish)
+(defun my/org-headline-colors-spacemacs-dark ()
+  "Set Org headline colors only (Spacemacs Dark-ish)."
+  (interactive)
+  ;; 文字色だけ変える（:weight や :height は触らない）
+  (set-face-attribute 'org-level-1 nil :foreground "#4f97d7")
+  (set-face-attribute 'org-level-2 nil :foreground "#2d9574")
+  (set-face-attribute 'org-level-3 nil :foreground "#67b11d")
+  (set-face-attribute 'org-level-4 nil :foreground "#b1951d")
+  (set-face-attribute 'org-level-5 nil :foreground "#a31db1")
+  (set-face-attribute 'org-level-6 nil :foreground "#bc6ec5")
+  (set-face-attribute 'org-level-7 nil :foreground "#7590db")
+  (set-face-attribute 'org-level-8 nil :foreground "#4f97d7"))
+;; 起動時に適用（Orgがロードされた後）
+(with-eval-after-load 'org
+  (my/org-headline-colors-spacemacs-dark))
+
+;; テーマを切り替えた後にも再適用（重要）
+(add-hook 'after-load-theme-hook #'my/org-headline-colors-spacemacs-dark)
+
+#+end_src
+
+
+* init-ui.el
+#+begin_src emacs-lisp
+
+;;馴染みのIビームにする。
+(setq-default cursor-type '(bar . 2))
+
+(use-package which-key
+  :ensure nil  ; ★Emacs 30では組み込みなので、ダウンロード不要
+  :init
+  (which-key-mode 1)
+  :config
+  ;; 0.5秒待ってからガイドを表示（一瞬で出るとチカチカするので、このくらいが快適です）
+  (setq which-key-idle-delay 0.05)
+  ;; ミニバッファの横に余裕を持って表示
+  (setq which-key-side-window-location 'bottom))
+
+;; モダンUI & 補完 (Vertico, Consult)
+(use-package vertico
+  :init
+  (vertico-mode 1)
+  :config
+  ;; 履歴（選んだ回数や新しさ）を最優先し、
+  ;; それ以外はアルファベット順に並べる「賢いソート」を有効にします。
+  (setq vertico-sort-function #'vertico-sort-history-alpha))
+
+(use-package marginalia :init (marginalia-mode 1))
+(use-package orderless :custom (completion-styles '(orderless basic)))
+
+(use-package consult
+  :bind (("C-x b" . consult-buffer)
+         ("s-r"   . consult-recent-file)
+         ("C-s"   . consult-line)
+         ("s-f"   . consult-line))
+  :config (setq consult-line-numbers-widen t))
+
+;; ダッシュボード & タブ
+(use-package tab-bar
+  :ensure nil
+  :init (tab-bar-mode 1)
+  :custom (tab-bar-show t)
+  (tab-bar-new-tab-choice "*dashboard*"))
+
+(use-package dashboard
+  :ensure t
+  :init
+  (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
+  :custom
+  (dashboard-startup-banner (expand-file-name "img/Nyan_dashboard.png" user-emacs-directory))
+  (dashboard-banner-logo-title "Wherever you go, there you are.")
+  (dashboard-items '((recents . 10) (projects . 5) (bookmarks . 5)))
+  (dashboard-center-content t)
+  (dashboard-set-heading-icons t)
+  (dashboard-set-file-icons t)
+  :config (dashboard-setup-startup-hook))
+
+(use-package undo-fu
+  :ensure t
+  :bind (("s-z" . undo-fu-only-undo)
+         ("s-Z" . undo-fu-only-redo)))
+
+(use-package vundo
+  :ensure t
+  :bind ("s-u" . vundo)
+  :config (set-face-attribute 'vundo-default nil :family "PlemolJP"))
+
+(use-package ace-window
+  :ensure t
+  :bind ("C-o" . ace-window)
+  :config
+  (setq aw-keys '(?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9))
+  (custom-set-faces
+   '(aw-leading-char-face
+     ((t (:height 3.0 :foreground "red" :weight bold))))))
+
+(use-package winner :ensure nil :config (winner-mode 1))
+(use-package beacon :ensure t :init (beacon-mode 1))
+
+
+(defun my/copy-line-or-region ()
+  (interactive)
+  (if (region-active-p) (kill-ring-save (region-beginning) (region-end))
+    (kill-ring-save (line-beginning-position) (line-end-position))))
+(global-set-key (kbd "s-c") 'my/copy-line-or-region)
+
+
+;; 選択範囲を「意味のまとまり」で段階的に広げる
+(use-package expand-region
+  :ensure t
+  :bind (("C-=" . er/expand-region)   ; 候補1：Control + =
+         ("s-e" . er/expand-region)   ; 候補2：Command + e (Expand)
+         ("C--" . er/contract-region) ; 狭める方は Control + -
+         ("s-E" . er/contract-region))) ; 狭める方は Command + Shift + e
+
+
+;; -----------------------------------------------------------------------------
+;; Google日本語(日：青) + Mac標準ABC(英：橙) の自動切替
+;; -----------------------------------------------------------------------------
+(use-package sis
+  :ensure t
+  :config
+  (sis-ism-lazyman-config
+   "com.apple.keylayout.US"
+   "com.google.inputmethod.Japanese.base")
+
+  ;; ★ここが本命：リーダーキーを「prefix override」に追加
+  (add-to-list 'sis-prefix-override-keys "C-;")
+
+  ;; prefix key を英語に落とす機能は respect-mode が担当
+  (sis-global-respect-mode t)
+
+  ;; （任意）カーソル色
+  (setq sis-cursor-color-indicator '("#FF9500" "#4285F4" "red"))
+  (sis-global-cursor-color-mode t))
+
+;;---------
+;; 英語関係
+;;---------
+;
+;; --- osx-dictionary (単語検索用) ---
+(use-package osx-dictionary
+  :ensure t
+  :bind (("C-c d" . osx-dictionary-search-pointer)    ; カーソル下の単語を検索
+         ("C-c i" . osx-dictionary-search-input)))    ; 入力して検索
+
+;; ;; --- google-translate (文章翻訳用) ---
+;; ;; --- 最近はgo-translateが主流と
+;; (use-package google-translate
+;;   :ensure t
+;;   :bind (("C-c t" . google-translate-at-point)        ; カーソル下の単語/選択範囲を翻訳
+;;          ("C-c T" . google-translate-query-translate)); 入力して翻訳
+;;   :config
+;;   ;; 日本語への翻訳をデフォルトにする設定
+;;   (setq google-translate-default-source-language "en")
+;;   (setq google-translate-default-target-language "ja"))
+
+;; (use-package gt
+;;   :ensure t
+;;   :bind (("C-c t" . gt-do-translate)) ; 翻訳実行
+;;   :config
+;;   ;; デフォルトの翻訳設定を定義
+;;   (setq gt-default-translator
+;;         (gt-translator
+;;          ;; 翻訳の向き（自動判別しつつ日英・英日を切り替え）
+;;          :taker   (gt-taker :langs '(en ja) :prompt t)
+;;          ;; エンジン（まずはGoogle翻訳。DeepL等も追加可能）
+;;          :engines (list (gt-google-engine))
+;;          ;; 出力先（バッファに表示。ポップアップが好きなら gt-posframe-render も可）
+;;          :render  (gt-buffer-render))))
+
+(use-package posframe
+  :ensure t
+  :demand t)
+
+(use-package gt
+  :ensure t
+  :bind (("C-c t" . gt-translate))
+  :config
+  (setq gt-langs '(en ja))
+  (require 'gt-render-posframe)
+  (require 'gt-engine-google)
+
+  (setq gt-default-translator
+        (gt-translator
+         ;; :text 'buffer と :pick 'paragraph の組み合わせで
+         ;; 「選択範囲があればそれ、なければ段落」を自動取得します
+         :taker   (gt-taker :text 'buffer :pick 'region-or-paragraph :prompt 'disable)
+         :engines (list (gt-google-engine))
+         :render  (gt-posframe-render))))
+
+
+;;----
+;; カーソル位置を光らせる（ジャンプ後の見失い防止）
+(use-package beacon
+  :ensure t
+  :init (beacon-mode 1)
+  :custom (beacon-color "#ce7e8e"))
+;; Diredモードの時はbeacon（光るエフェクト）をオフにする
+(add-hook 'dired-mode-hook (lambda () (beacon-mode -1)))
+#+end_src
+
+* init-org.el
+#+begin_src elisp
+(global-set-key (kbd "C-c l") 'org-store-link)
+
+;; Org-mode 外見設定関数
+(defun my/org-mode-visual-settings ()
+  "Org-modeの本文をヒラギノに、表などを等幅にする"
+  (face-remap-add-relative 'default :family "Hiragino Kaku Gothic Pro" :height 180)
+  (set-face-attribute 'org-table nil :family "PlemolJP" :height 170)
+  (set-face-attribute 'org-block nil :family "PlemolJP" :height 160)
+  (set-face-attribute 'org-code nil :family "PlemolJP" :height 160)
+  (set-face-attribute 'org-verbatim nil :family "PlemolJP" :height 160)
+
+  ;; 行番号のフォントをPlemolJPに指定。これで桁がずれなくなる
+  (face-remap-add-relative 'line-number :family "PlemolJP" :height 160)
+
+
+
+;; 日本語検索 (Migemo)
+(use-package migemo
+  :if (executable-find "cmigemo")
+  :config
+  (setq migemo-command "cmigemo")
+  (setq migemo-options '("-q" "--emacs"))
+  (setq migemo-dictionary "/opt/homebrew/share/migemo/utf-8/migemo-dict")
+  (migemo-init))
+
+  ;; 行間の設定
+  (setq-local line-spacing 0.15))
+
+;; Org-mode 本体
+(use-package org
+  :hook (org-mode . my/org-mode-visual-settings)
+  :custom
+  (org-startup-indented t)
+  (org-hide-emphasis-markers t)
+
+;; --- ここを追記 --- org-babel以降用
+  (org-src-fontify-natively t)    ; ブロック内を言語ごとの色にする
+  (org-src-tab-acts-natively t)   ; Tabを言語ごとの挙動にする
+  (org-edit-src-content-indentation 0) ; 無駄なインデントを防ぐ
+
+  
+  (org-startup-with-inline-images t))
+
+;; ブロック内の「地の文」の色を、現在のテーマの標準色にリセットする
+(with-eval-after-load 'org
+  (set-face-attribute 'org-block nil :foreground 'unspecified))
+
+
+(use-package olivetti
+  :hook (org-mode . olivetti-mode)
+  :custom (olivetti-body-width 90))
+
+;; PDF Tools 設定
+(use-package pdf-tools
+  :ensure t
+  :magic ("%PDF" . pdf-view-mode)
+  :config
+  (pdf-loader-install)
+  (with-eval-after-load 'pdf-view
+    (define-key pdf-view-mode-map (kbd "j") 'pdf-view-next-line-or-next-page)
+    (define-key pdf-view-mode-map (kbd "k") 'pdf-view-previous-line-or-previous-page)
+    (define-key pdf-view-mode-map (kbd "l") 'image-forward-hscroll)
+    (define-key pdf-view-mode-map (kbd "h") 'image-backward-hscroll)
+    (define-key pdf-view-mode-map (kbd "o") 'pdf-occur))
+  (setq pdf-view-use-scaling t)
+  (setq-default pdf-view-display-size 'fit-width)
+  (setq pdf-view-continuous t)
+  (add-hook 'pdf-view-mode-hook (lambda () (display-line-numbers-mode -1)))
+  (add-hook 'pdf-view-mode-hook (lambda () (line-number-mode -1))))
+
+
+;; 1. Org-mode側のルールを矯正する
+;;    デフォルトだと「ファイルリンクは別窓で開く」設定になっているため、
+;;    これを「find-file (現在の窓で開く)」に強制変更します。
+(setq org-link-frame-setup '((file . find-file)))
+
+;; 2. Emacs全体のルールを強制適用するスイッチ
+(setq switch-to-buffer-obey-display-actions t)
+
+;; 3. ファイルの種類ごとの表示ルール (display-buffer-alist)
+(setq display-buffer-alist
+      '(
+        ;; 【ルールA】 PDFファイル (.pdf)
+        ;; → 右側のサイドウィンドウに隔離して表示
+        ("\\.pdf\\'"
+         (display-buffer-in-side-window)
+         (side . right)
+         (slot . 0)
+         (window-width . 0.5))
+         ;;(preserve-size . (t . t))
+
+        ;; 【ルールB】 Orgファイル (.org)
+        ;; → Denoteなども含め、絶対に「今のウィンドウ」で開く
+        ("\\.org$"
+         (display-buffer-same-window)
+         (inhibit-same-window . nil)) ; 「同じ窓禁止」フラグを明示的にOFFにする
+       ))
+
+
+(use-package org-pdftools
+  :ensure t
+  :hook (org-mode . org-pdftools-setup-link)
+  :config (org-pdftools-setup-link))
+
+
+
+;;; ================================================================
+;;; Org-download & DND: 画像は自動、その他はメニュー選択
+;;; ================================================================
+(use-package org-download
+  :ensure t
+  :after org
+  :config
+  (require 'cl-lib)
+  (require 'org-attach)
+
+  ;; --- 1. org-download の設定（画像専用） ---
+  (setq org-download-method 'directory)
+  (setq-default org-download-image-dir "./images")
+  (setq org-download-heading-alist nil)
+  (setq org-download-timestamp "%Y%m%d-%H%M%S_")
+  (setq org-download-annotate-function
+        (lambda (_link) "#+ATTR_ORG: :width 400\n"))
+
+  ;; --- 2. 画像判定用の正規表現 ---
+  (defconst my/org-dnd-image-regexp
+    (concat "^file:.*\\."
+            "\\(?:png\\|jpe?g\\|gif\\|webp\\|svg\\|bmp\\|tiff?\\)"
+            "\\(?:[?#].*\\)?$")
+    "Drag & drop で画像として扱う file: URI の正規表現。")
+
+  ;; --- 3. 画像以外の時に出すメニュー処理（重複チェック追加） ---
+  (defun my/org-dnd-nonimage-menu (file)
+    "非画像ファイルDND時に、どうするかメニューで尋ねる"
+    (let* ((choices '("Attach (to ./data)" "Insert Link (Relative)" "Open File"))
+           (choice (completing-read (format "Action for %s: " (file-name-nondirectory file))
+                                    choices nil t)))
+      (pcase choice
+        ("Attach (to ./data)"
+         ;; A. Attach: dataフォルダにコピー（重複時はスキップ）
+         (let* ((basename (file-name-nondirectory file))
+                ;; 添付先フォルダを取得（なければ作成される）
+                (attach-dir (org-attach-dir t)) 
+                (target-file (expand-file-name basename attach-dir)))
+           
+           (if (file-exists-p target-file)
+               ;; 既にファイルがある場合: コピーせず通知だけする
+               (message "File '%s' already exists in data folder. Skipping copy." basename)
+             
+             ;; ない場合: コピーを実行
+             (org-attach-attach file nil 'cp)))
+
+         ;; どっちのケースでもリンクを書き込む
+         (insert (format "[[attachment:%s]]\n" (file-name-nondirectory file))))
+        
+        ("Insert Link (Relative)"
+         ;; B. Link: 相対リンク
+         (let* ((base (or (and (buffer-file-name) (file-name-directory (buffer-file-name)))
+                          default-directory))
+                (rel  (file-relative-name file base)))
+           (insert (format "[[file:%s]]\n" rel))))
+        
+        ("Open File"
+         ;; C. Open: 開く
+         (find-file file)))))
+
+  ;; --- 4. 非画像用ハンドラ ---
+  (defun my/org-dnd-handle-nonimage (uri _action)
+    (let ((file (dnd-get-local-file-name uri t)))
+      (when (and file (file-exists-p file))
+        (my/org-dnd-nonimage-menu file)
+        'private)))
+
+  ;; --- 5. セットアップ ---
+  (defun my/org-dnd-setup ()
+    (org-download-enable)
+    (let ((case-fold-search t))
+      (setq-local dnd-protocol-alist
+                  (append
+                   (list
+                    (cons my/org-dnd-image-regexp #'org-download-dnd)
+                    (cons "^file:"                #'my/org-dnd-handle-nonimage))
+                   dnd-protocol-alist))))
+
+  (add-hook 'org-mode-hook #'my/org-dnd-setup))
+
+;;--------Org-download ends here---
+
+
+(use-package org-modern
+  :hook (org-mode . org-modern-mode)
+  :custom (org-modern-star nil)
+  (org-modern-table nil))
+
+(use-package org-superstar
+  :ensure t
+  :after org
+  :hook
+  (org-mode . org-superstar-mode)
+  :custom
+  ;; * を消して bullet に置き換える（Spacemacs/Doomっぽさが出る）
+  (org-superstar-remove-leading-stars t)
+
+  ;; ここが “味” の部分：見出しレベルごとの bullet
+  (setq org-superstar-headline-bullets-list '("◉" "○" "✸" "✿" "•" "·" "·"))  
+  ;; 箇条書きの点も変えたい場合（不要ならこの行は消してOK）
+  (org-superstar-item-bullet-alist '((?+ . ?•) (?- . ?•) (?* . ?•))))
+
+(use-package denote
+  :hook (dired-mode . denote-dired-mode)
+  :custom 
+  (denote-directory "~/Documents/denote")
+  (denote-file-type 'org)
+   ;;検索/候補の並びを “最終更新日時 (mtime)” 基準にする
+  (denote-query-sorting 'last-modified)
+
+  :config
+  (denote-rename-buffer-mode 1)
+
+  ;; Savehistが読み込まれたタイミングで、denote専用の履歴変数も保存対象に加えます
+  (with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'denote-file-history))
+  
+  :bind (("C-c n n" . denote)
+         ("C-c n f" . denote-open-or-create)))
+
+
+;; EPUB閲覧用（警告消去のため）
+(use-package nov :ensure t)
+;; DjVu閲覧用（警告消去のため）
+(use-package djvu :ensure t)
+
+#+end_src
+
+* vba-mode
+#+begin_src elisp
+(require 'prog-mode)
+
+;; -------------------------------------------------------------------------
+;; 1. Customization
+;; -------------------------------------------------------------------------
+
+(defgroup vba-mode nil
+  "Major mode for editing Visual Basic for Applications."
+  :group 'languages)
+
+(defcustom vba-mode-indent-offset 4
+  "Indentation amount per level."
+  :type 'integer
+  :safe #'integerp
+  :group 'vba-mode)
+
+(defcustom vba-mode-continuation-offset 4
+  "Extra indentation for line continuations (lines ending in _).
+Set to 0 to align with the previous line."
+  :type 'integer
+  :safe #'integerp
+  :group 'vba-mode)
+
+(defcustom vba-mode-indent-case-extra-offset 0
+  "Indentation of `Case` lines relative to the `Select Case` line.
+- 0: align `Case` with `Select Case` (Standard)
+- 4: indent `Case` lines one level deeper than `Select Case`"
+  :type 'integer
+  :safe #'integerp
+  :group 'vba-mode)
+
+;; -------------------------------------------------------------------------
+;; 2. Syntax & Highlights
+;; -------------------------------------------------------------------------
+
+(defvar vba-mode-syntax-table
+  (let ((st (make-syntax-table)))
+    (modify-syntax-entry ?' "<" st)   ; Comment start
+    (modify-syntax-entry ?\n ">" st)  ; Comment end
+    (modify-syntax-entry ?\" "\"" st) ; String
+    (modify-syntax-entry ?_ "w" st)   ; Symbol constituent
+    (modify-syntax-entry ?: "." st)   ; Punctuation separator
+    st)
+  "Syntax table for `vba-mode'.")
+
+(defconst vba-mode-keywords
+  (regexp-opt '("Option" "Explicit" "Sub" "Function" "Property" "End"
+                "If" "Then" "Else" "ElseIf" "Select" "Case" "Default"
+                "For" "Each" "Next" "Do" "Loop" "While" "Wend" "Until"
+                "With" "Exit" "GoTo" "On" "Error" "Resume"
+                "Dim" "ReDim" "Preserve" "Public" "Private" "Static" "Friend"
+                "As" "Set" "New" "Call" "Let" "Get"
+                "ByVal" "ByRef" "Optional" "ParamArray"
+                "And" "Or" "Not" "Xor" "Mod" "Is" "Like" "Imp" "Eqv") 'symbols))
+
+(defconst vba-mode-types
+  (regexp-opt '("Boolean" "Byte" "Integer" "Long" "LongLong" "Single" "Double"
+                "Currency" "String" "Date" "Variant" "Object" "Collection") 'symbols))
+
+;; Minimized Built-ins to reduce false positives (Removed 'Events')
+(defconst vba-mode-builtins
+  (regexp-opt '("Application" "Debug" "Err" "VBA" "Me") 'symbols))
+
+(defconst vba-mode-constants
+  (regexp-opt '("True" "False" "Nothing" "Empty" "Null" "vbCr" "vbLf" "vbCrLf"
+                "vbNullString" "vbTab" "vbOK" "vbCancel" "vbYes" "vbNo") 'symbols))
+
+(defvar vba-mode-font-lock-keywords
+  `((,vba-mode-keywords . font-lock-keyword-face)
+    (,vba-mode-types . font-lock-type-face)
+    (,vba-mode-builtins . font-lock-builtin-face)
+    (,vba-mode-constants . font-lock-constant-face)
+    ;; Rem comments (Must be followed by space or EOL)
+    ("^[ \t]*\\(Rem\\b\\(?:[ \t].*\\)?\\)$" 1 font-lock-comment-face)
+    ;; Function names
+    ("\\_<\\(?:Sub\\|Function\\|Property\\)\\_>[ \t]+\\([A-Za-z0-9_]+\\)"
+     1 font-lock-function-name-face)
+    ;; Variable declarations
+    ("\\_<\\(?:Dim\\|Const\\|Public\\|Private\\)\\_>[ \t]+\\([A-Za-z0-9_]+\\)"
+     1 font-lock-variable-name-face)
+    ;; Labels
+    ("^[ \t]*\\([A-Za-z0-9_]+\\):" 1 font-lock-constant-face)))
+
+;; -------------------------------------------------------------------------
+;; 3. Indentation Helpers (Predicates)
+;; -------------------------------------------------------------------------
+
+(defun vba-mode--prev-meaningful-line ()
+  "Return the point at the beginning of the previous non-blank/non-comment line."
+  (save-excursion
+    (let ((found nil))
+      (while (and (not found) (zerop (forward-line -1)))
+        (unless (looking-at-p "^[ \t]*\\(?:'.*\\)?$")
+          (setq found (point))))
+      found)))
+
+(defun vba-mode--line-str-at (pt)
+  (save-excursion
+    (goto-char pt)
+    (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+
+(defun vba-mode--curr-line-str ()
+  (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+
+(defun vba-mode--select-case-p (s)
+  (string-match-p "^[ \t]*Select\\s-+Case\\b" s))
+
+(defun vba-mode--case-line-p (s)
+  (string-match-p "^[ \t]*Case\\b" s))
+
+(defun vba-mode--if-block-opener-p (s)
+  ;; Matches "If ... Then" ONLY if Then is at EOL or followed by comment
+  (string-match-p "If\\b.*\\bThen\\s-*\\(?:'\\|$\\)" s))
+
+(defun vba-mode--continuation-p (s)
+  (string-match-p ".*_[ \t]*\\(?:'.*\\)?$" s))
+
+(defun vba-mode--other-opener-p (s)
+  ;; Note: 'Case' is purposely excluded here. It is handled in Step 4.
+  (string-match-p
+   (concat "^[ \t]*\\(?:"
+           "For\\b"
+           "\\|Do\\b"
+           "\\|With\\b"
+           "\\|While\\b"
+           "\\|Sub\\b"
+           "\\|Function\\b"
+           "\\|Property\\b"
+           "\\|Type\\b"
+           "\\|Enum\\b"
+           "\\|Else\\b"
+           "\\|ElseIf\\b"
+           "\\)")
+   s))
+
+(defun vba-mode--closer-p (s)
+  (string-match-p
+   (concat "^[ \t]*\\(?:"
+           "End\\s-+\\(?:If\\|Sub\\|Function\\|Property\\|Select\\|With\\|Type\\|Enum\\)\\b"
+           "\\|Next\\b"
+           "\\|Loop\\b"
+           "\\|Wend\\b"
+           "\\|Else\\b"
+           "\\|ElseIf\\b"
+           "\\)")
+   s))
+
+;; -------------------------------------------------------------------------
+;; 4. Indentation Logic (Robust 4-Step Process)
+;; -------------------------------------------------------------------------
+
+(defun vba-mode--calc-indent ()
+  "Calculate indentation level using a 4-step state machine."
+  (let ((indent 0)
+        (prev-point (vba-mode--prev-meaningful-line))
+        (case-fold-search t))
+
+    (if (not prev-point)
+        0
+      (let* ((prev-str (vba-mode--line-str-at prev-point))
+             (prev-indent (save-excursion (goto-char prev-point) (current-indentation)))
+             (curr-str (vba-mode--curr-line-str)))
+
+        ;; Base: previous meaningful line indentation
+        (setq indent prev-indent)
+
+        ;; --- Step 1: Continuation from previous line ---
+        (when (vba-mode--continuation-p prev-str)
+          (setq indent (+ indent vba-mode-continuation-offset)))
+
+        ;; --- Step 2: Opener effects (Block start) ---
+        (cond
+         ((vba-mode--if-block-opener-p prev-str)
+          (setq indent (+ indent vba-mode-indent-offset)))
+         ((vba-mode--select-case-p prev-str)
+          (setq indent (+ indent vba-mode-indent-offset)))
+         ((vba-mode--other-opener-p prev-str)
+          (setq indent (+ indent vba-mode-indent-offset))))
+
+        ;; --- Step 3: Current line adjustments (Dedent/Alignment) ---
+        (cond
+         ;; Case line: Align relative to Select Case (or prev level)
+         ((vba-mode--case-line-p curr-str)
+          (if (vba-mode--select-case-p prev-str)
+              ;; If following Select Case directly -> Align + extra offset
+              (setq indent (+ prev-indent vba-mode-indent-case-extra-offset))
+            ;; Otherwise -> Dedent 1 level (undoing Case Content indent) + extra offset
+            (setq indent (+ (max 0 (- indent vba-mode-indent-offset))
+                            vba-mode-indent-case-extra-offset))))
+
+         ;; Standard Closer: Dedent 1 level
+         ((vba-mode--closer-p curr-str)
+          (setq indent (max 0 (- indent vba-mode-indent-offset)))))
+
+        ;; --- Step 4: Case Content Indentation ---
+        ;; If prev was Case, and current is NOT Case (content), add indent.
+        ;; We trust prev-indent here (standard Emacs practice).
+        ;; If prev line was indented correctly, (prev-indent + offset) is correct.
+        (when (and (vba-mode--case-line-p prev-str)
+                   (not (vba-mode--case-line-p curr-str)))
+          (setq indent (+ prev-indent vba-mode-indent-offset)))
+
+        (max 0 indent)))))
+
+(defun vba-mode-indent-line ()
+  (interactive)
+  (let ((indent (vba-mode--calc-indent))
+        (pos (- (point-max) (point))))
+    (indent-line-to indent)
+    (if (> (- (point-max) pos) (point))
+        (goto-char (- (point-max) pos)))))
+
+;; -------------------------------------------------------------------------
+;; 5. Mode Definition & Autoloads
+;; -------------------------------------------------------------------------
+
+;;;###autoload
+(define-derived-mode vba-mode prog-mode "VBA"
+  "Major mode for editing Excel VBA."
+  :syntax-table vba-mode-syntax-table
+  (setq-local font-lock-defaults '(vba-mode-font-lock-keywords nil t))
+  (setq-local indent-line-function #'vba-mode-indent-line)
+  (setq-local comment-start "' ")
+  (setq-local comment-start-skip "'+\\s-*")
+  (setq-local outline-regexp "^[ \t]*\\(Sub\\|Function\\|Property\\|Enum\\|Type\\)")
+  (setq-local case-fold-search t))
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.\\(?:bas\\|cls\\|frm\\|vbs\\)\\'" . vba-mode))
+
+(with-eval-after-load 'org
+  ;; Support both lowercase and uppercase (VBA) for convenience
+  (dolist (lang '("vba" "VBA" "vbs"))
+    (add-to-list 'org-src-lang-modes (cons lang 'vba))))
+(provide 'vba-mode)
+#+end_src
+
+* init-dev.el
+#+begin_src elisp
+;; Git連携 (Magit)
+(use-package magit
+  :ensure t
+  :bind (("C-x g" . magit-status)))
+
+
+;; 洗練された補完 UI (Corfu)
+(use-package corfu
+  :ensure t
+  :custom
+  (corfu-auto t)                 ; 自動で候補を出す
+  (corfu-auto-delay 0.1)         ; 0.1秒待って表示
+  (corfu-auto-prefix 2)          ; 2文字打ったら表示
+  (corfu-quit-at-boundary nil)   ; スペースを打っても消えない
+  :init
+  (global-corfu-mode 1)
+  :hook
+  (org-mode . (lambda ()        ; Org-modeではOff
+                (setq-local corfu-auto nil))))
+
+;; 構文チェックの標準化 (Flymake)
+;; Emacs標準の機能を使って、コードの書き間違いを警告します
+(add-hook 'prog-mode-hook 'flymake-mode)
+
+;; Tree-sitter & Eglot (以前の設定を維持)
+(use-package treesit
+  :ensure nil
+  :if (boundp 'treesit-font-lock-level)
+  :config
+  (setq treesit-font-lock-level 4))
+
+(use-package eglot
+  :ensure nil
+  :hook
+  ((python-ts-mode . eglot-ensure)
+   (js-ts-mode . eglot-ensure))
+  :config
+  (keymap-set eglot-mode-map "s-." 'eglot-code-actions))
+
+;; 変数のハイライト
+(use-package symbol-overlay
+  :ensure t
+  :bind ("M-i" . symbol-overlay-put))
+
+(require 'vba-mode)
+
+
+;;------------------------------
+;; ESS Emacs Speaks Statistics)
+;;------------------------------
+(use-package ess
+  :ensure t
+  :init
+  (require 'ess-site)
+  :config
+  ;; 起動時に作業ディレクトリをいちいち聞かれないようにする（ストレス緩和）
+  (setq ess-ask-for-project-root nil))
+
+
+#+end_src
+
+* init-keybindings.el
+#+begin_src elisp
+;; -----------------------------------------------------------------------------
+;; 1. リーダーキーの定義 (C-; を起点にする)
+;; -----------------------------------------------------------------------------
+(defvar-keymap tk-leader-map
+  :doc "TK先生の『ホームポジション・メニュー』"
+  ;; 基本操作 (File, Buffer, Save)
+  "f" #'find-file             ; [f]ile
+  "b" #'consult-buffer        ; [b]uffer
+  "s" #'save-buffer           ; [s]ave
+  "p" #'project-find-file     ; [p]roject
+  "k" #'kill-current-buffer   ; [k]ill
+  "d" #'dired-jump            ; [d]ired: 今のファイルの場所をファイラーで開く
+  
+  ;; 検索操作 (Search/Grep)
+  "l" #'consult-line          ; [l]ine: 今のファイル内
+  "g" #'consult-grep          ; [g]rep: フォルダ内
+  "r" #'consult-ripgrep       ; [r]ipgrep: 爆速検索
+
+  ;; 今後増やしていく枠
+  "o" nil                     ; [o]rg-mode
+  "v" nil)                    ; [v]iewer / PDF
+
+;; 全体で C-; を入り口に設定
+(keymap-set global-map "C-;" tk-leader-map)
+
+;; -----------------------------------------------------------------------------
+;; 2. which-key のラベル修正
+;; -----------------------------------------------------------------------------
+(with-eval-after-load 'which-key
+  (which-key-add-keymap-based-replacements global-map "C-;" "Leader"))
+
+
+;; Mac標準ショートカットと行操作
+(global-set-key (kbd "s-a") 'mark-whole-buffer)
+(global-set-key (kbd "s-v") 'yank)
+(global-set-key (kbd "s-s") 'save-buffer)
+(global-set-key (kbd "s-w") 'kill-current-buffer)
+(global-set-key (kbd "s-q") 'save-buffers-kill-emacs)
+(global-set-key (kbd "s-t") #'tab-new)
+(global-set-key (kbd "s-{") #'tab-previous)
+(global-set-key (kbd "s-}") #'tab-next)
+
+;; Command + 矢印キー でウィンドウ間を移動
+(define-key global-map (kbd "s-<left>")  'windmove-left)
+(define-key global-map (kbd "s-<right>") 'windmove-right)
+(define-key global-map (kbd "s-<up>")    'windmove-up)
+(define-key global-map (kbd "s-<down>")  'windmove-down)
+
+#+end_src
+
