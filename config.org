@@ -1,6 +1,6 @@
-#+TITLE: My Emacs config
+denote#+TITLE: My Emacs config
 #+AUTHOR: Toshi Kasuga
-#+STARTUP: folded
+#+STARTUP: content
 
 * init-base.el
 #+begin_src elisp
@@ -8,10 +8,13 @@
 (setq gc-cons-threshold (* 100 1024 1024))
 (add-hook 'emacs-startup-hook (lambda () (setq gc-cons-threshold (* 2 1024 1024))))
 
+(setq native-comp-async-report-warnings-errors 'silent)
+
+
 (set-language-environment "Japanese")
 (prefer-coding-system 'utf-8)
 
-;; ウインドウサイズと位置 (M4 MacBook Pro用)
+;; 起動時のウインドウサイズと位置
 (setq initial-frame-alist '((width . 120) (height . 50) (top . 50) (left . 100)))
 (setq default-frame-alist '((width . 120) (height . 50)))
 
@@ -23,16 +26,12 @@
 (when (eq system-type 'darwin)
   (setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
   (add-to-list 'exec-path "/opt/homebrew/bin")
-  (add-to-list 'exec-path "/usr/local/bin"))
+  (add-to-list 'exec-path "/usr/local/bin")
+  (add-to-list 'exec-path "/Library/TeX/texbin"))
 
-;; カッコの閉じ忘れ・視認性対策
-(electric-pair-mode 1)   ; カッコを自動で閉じる
-(show-paren-mode 1)      ; 対応するカッコを光らせる
-(setq show-paren-delay 0)
-
-(use-package rainbow-delimiters
-  :ensure t
-  :hook (prog-mode . rainbow-delimiters-mode))
+(setenv "PATH"
+        (concat "/Library/TeX/texbin:"
+                (getenv "PATH")))
 
 ;;パッケージ管理 (標準 package.el)
 (require 'package)
@@ -47,22 +46,33 @@
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
 
-
 (use-package savehist
   :init
   (savehist-mode 1)
   (setq history-length 100))
 
+(use-package recentf
+  :ensure nil
+  :init
+  (recentf-mode 1)
+  :custom
+  (recentf-max-saved-items 300)
+  (recentf-auto-cleanup 'never))
+
+;; Completion: 大文字/小文字を無視（Denote / find-file / consult 全部に効く）
+(setq completion-ignore-case t)
+(setq read-file-name-completion-ignore-case t)
+(setq read-buffer-completion-ignore-case t)
 
 ;; 行番号表示に関する設定
 (global-display-line-numbers-mode t)
-;; 't (絶対行) が一般的ですが、'relative (相対行) も根強い人気があります
+;; 't (絶対行) 、'relative (相対行) 
 (setq display-line-numbers-type t)
 
 ;; 3. 桁数が増えても横にガタつかないようにする（必須設定）
 (setq display-line-numbers-width-start t)
 
-;; 4. 【おすすめ】行番号のフォントだけ固定幅にする
+;; 4.行番号のフォントだけ固定幅にする
 ;; プロポーショナルフォントを全体で使っていても、行番号のズレを防げます
 (set-face-attribute 'line-number nil :inherit 'fixed-pitch)
 
@@ -91,6 +101,57 @@
 (setq scroll-conservatively 101)
 (setq scroll-margin 0)
 (setq maximum-scroll-margin 0.1) ; 画面全体の10%以上はマージンを作らない
+#+end_src
+* init-keybindings.el
+#+begin_src elisp
+;; -----------------------------------------------------------------------------
+;; 1. リーダーキーの定義 (C-; を起点にする)
+;; -----------------------------------------------------------------------------
+(defvar-keymap tk-leader-map
+  :doc "TK先生の『ホームポジション・メニュー』"
+  ;; 基本操作 (File, Buffer, Save)
+  "f" #'find-file             ; [f]ile
+  "b" #'consult-buffer        ; [b]uffer
+  "s" #'save-buffer           ; [s]ave
+  "p" #'project-find-file     ; [p]roject
+  "k" #'kill-current-buffer   ; [k]ill
+  "d" #'dired-jump            ; [d]ired: 今のファイルの場所をファイラーで開く
+  
+  ;; 検索操作 (Search/Grep)
+  "l" #'consult-line          ; [l]ine: 今のファイル内
+  "g" #'consult-grep          ; [g]rep: フォルダ内
+  "r" #'consult-ripgrep       ; [r]ipgrep: 爆速検索
+
+  ;; 今後増やしていく枠
+  "o" nil                     ; [o]rg-mode
+  "v" nil)                    ; [v]iewer / PDF
+
+;; 全体で C-; を入り口に設定
+(keymap-set global-map "C-;" tk-leader-map)
+
+;; -----------------------------------------------------------------------------
+;; 2. which-key のラベル修正
+;; -----------------------------------------------------------------------------
+(with-eval-after-load 'which-key
+  (which-key-add-keymap-based-replacements global-map "C-;" "Leader"))
+
+
+;; Mac標準ショートカットと行操作
+(global-set-key (kbd "s-a") 'mark-whole-buffer)
+(global-set-key (kbd "s-v") 'yank)
+(global-set-key (kbd "s-s") 'save-buffer)
+(global-set-key (kbd "s-w") 'kill-current-buffer)
+(global-set-key (kbd "s-q") 'save-buffers-kill-emacs)
+(global-set-key (kbd "s-t") #'tab-new)
+(global-set-key (kbd "s-{") #'tab-previous)
+(global-set-key (kbd "s-}") #'tab-next)
+
+;; Command + 矢印キー でウィンドウ間を移動
+(define-key global-map (kbd "s-<left>")  'windmove-left)
+(define-key global-map (kbd "s-<right>") 'windmove-right)
+(define-key global-map (kbd "s-<up>")    'windmove-up)
+(define-key global-map (kbd "s-<down>")  'windmove-down)
+
 #+end_src
 
 * Font and theme
@@ -132,7 +193,6 @@
 
 #+end_src
 
-
 * init-ui.el
 #+begin_src emacs-lisp
 
@@ -140,16 +200,15 @@
 (setq-default cursor-type '(bar . 2))
 
 (use-package which-key
-  :ensure nil  ; ★Emacs 30では組み込みなので、ダウンロード不要
+  :ensure nil
   :init
   (which-key-mode 1)
   :config
-  ;; 0.5秒待ってからガイドを表示（一瞬で出るとチカチカするので、このくらいが快適です）
   (setq which-key-idle-delay 0.05)
   ;; ミニバッファの横に余裕を持って表示
   (setq which-key-side-window-location 'bottom))
 
-;; モダンUI & 補完 (Vertico, Consult)
+;; モダンUI & 補完 (Vertico, Consult, Embark)
 (use-package vertico
   :init
   (vertico-mode 1)
@@ -159,7 +218,13 @@
   (setq vertico-sort-function #'vertico-sort-history-alpha))
 
 (use-package marginalia :init (marginalia-mode 1))
-(use-package orderless :custom (completion-styles '(orderless basic)))
+
+(use-package orderless
+  :ensure t
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles orderless basic)))))
 
 (use-package consult
   :bind (("C-x b" . consult-buffer)
@@ -167,6 +232,18 @@
          ("C-s"   . consult-line)
          ("s-f"   . consult-line))
   :config (setq consult-line-numbers-widen t))
+
+(use-package embark
+  :ensure t
+  :bind (("C-." . embark-act)
+         ("M-." . embark-dwim)
+         ("C-h B" . embark-bindings)))
+
+(use-package embark-consult
+  :ensure t
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
+
+
 
 ;; ダッシュボード & タブ
 (use-package tab-bar
@@ -188,6 +265,18 @@
   (dashboard-set-file-icons t)
   :config (dashboard-setup-startup-hook))
 
+(use-package nerd-icons :ensure t)
+
+;; 日本語検索 (Migemo)
+(use-package migemo
+  :if (executable-find "cmigemo")
+  :config
+  (setq migemo-command "cmigemo")
+  (setq migemo-options '("-q" "--emacs"))
+  (setq migemo-dictionary "/opt/homebrew/share/migemo/utf-8/migemo-dict")
+  (migemo-init))
+
+
 (use-package undo-fu
   :ensure t
   :bind (("s-z" . undo-fu-only-undo)
@@ -208,7 +297,6 @@
      ((t (:height 3.0 :foreground "red" :weight bold))))))
 
 (use-package winner :ensure nil :config (winner-mode 1))
-(use-package beacon :ensure t :init (beacon-mode 1))
 
 
 (defun my/copy-line-or-region ()
@@ -247,62 +335,11 @@
   (setq sis-cursor-color-indicator '("#FF9500" "#4285F4" "red"))
   (sis-global-cursor-color-mode t))
 
-;;---------
-;; 英語関係
-;;---------
-;
-;; --- osx-dictionary (単語検索用) ---
-(use-package osx-dictionary
-  :ensure t
-  :bind (("C-c d" . osx-dictionary-search-pointer)    ; カーソル下の単語を検索
-         ("C-c i" . osx-dictionary-search-input)))    ; 入力して検索
 
-;; ;; --- google-translate (文章翻訳用) ---
-;; ;; --- 最近はgo-translateが主流と
-;; (use-package google-translate
-;;   :ensure t
-;;   :bind (("C-c t" . google-translate-at-point)        ; カーソル下の単語/選択範囲を翻訳
-;;          ("C-c T" . google-translate-query-translate)); 入力して翻訳
-;;   :config
-;;   ;; 日本語への翻訳をデフォルトにする設定
-;;   (setq google-translate-default-source-language "en")
-;;   (setq google-translate-default-target-language "ja"))
-
-;; (use-package gt
-;;   :ensure t
-;;   :bind (("C-c t" . gt-do-translate)) ; 翻訳実行
-;;   :config
-;;   ;; デフォルトの翻訳設定を定義
-;;   (setq gt-default-translator
-;;         (gt-translator
-;;          ;; 翻訳の向き（自動判別しつつ日英・英日を切り替え）
-;;          :taker   (gt-taker :langs '(en ja) :prompt t)
-;;          ;; エンジン（まずはGoogle翻訳。DeepL等も追加可能）
-;;          :engines (list (gt-google-engine))
-;;          ;; 出力先（バッファに表示。ポップアップが好きなら gt-posframe-render も可）
-;;          :render  (gt-buffer-render))))
 
 (use-package posframe
   :ensure t
   :demand t)
-
-(use-package gt
-  :ensure t
-  :bind (("C-c t" . gt-translate))
-  :config
-  (setq gt-langs '(en ja))
-  (require 'gt-render-posframe)
-  (require 'gt-engine-google)
-
-  (setq gt-default-translator
-        (gt-translator
-         ;; :text 'buffer と :pick 'paragraph の組み合わせで
-         ;; 「選択範囲があればそれ、なければ段落」を自動取得します
-         :taker   (gt-taker :text 'buffer :pick 'region-or-paragraph :prompt 'disable)
-         :engines (list (gt-google-engine))
-         :render  (gt-posframe-render))))
-
-
 ;;----
 ;; カーソル位置を光らせる（ジャンプ後の見失い防止）
 (use-package beacon
@@ -313,35 +350,44 @@
 (add-hook 'dired-mode-hook (lambda () (beacon-mode -1)))
 #+end_src
 
+* mode-line
+#+begin_src elisp
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1)
+  :custom
+  ;; --- 表示のカスタマイズ ---
+  (doom-modeline-height 25)      ; モードラインの高さ
+  (doom-modeline-bar-width 4)    ; 左端のバーの太さ
+  (doom-modeline-buffer-file-name-style 'truncate-with-project) ; パスの表示形式
+;; 'truncate-with-project  がもともと
+;; 'buffer-name でバッファー名だけ
+  
+  ;; --- アイコンの設定 ---
+  (doom-modeline-icon t)         ; アイコンを表示する
+  (doom-modeline-major-mode-icon t)
+  
+  ;; --- 追加情報の表示（Toshiさんのリクエスト関連） ---
+  (doom-modeline-word-count t)   ; ★文字数/単語数を表示
+  (doom-modeline-buffer-encoding t) ; 改行コードなどを表示
+  (doom-modeline-indent-info t)  ; インデント幅を表示
+  (doom-modeline-checkers t)     ; Flymakeなどのエラー数を表示
+  (doom-modeline-word-count t)
+  
+  ;; --- 外見の微調整 ---
+  (doom-modeline-theme 'catppuccin)) ; または 'catppuccin' など
+;; doom-atomがデフォルト
+
+#+end_src
+
 * init-org.el
 #+begin_src elisp
-(global-set-key (kbd "C-c l") 'org-store-link)
-
-;; Org-mode 外見設定関数
+;; Org-mode 外見設定関数（バッファローカル寄り）
 (defun my/org-mode-visual-settings ()
-  "Org-modeの本文をヒラギノに、表などを等幅にする"
+  "Org-mode の本文を可変幅、表やコードを見やすくする。"
   (face-remap-add-relative 'default :family "Hiragino Kaku Gothic Pro" :height 180)
-  (set-face-attribute 'org-table nil :family "PlemolJP" :height 170)
-  (set-face-attribute 'org-block nil :family "PlemolJP" :height 160)
-  (set-face-attribute 'org-code nil :family "PlemolJP" :height 160)
-  (set-face-attribute 'org-verbatim nil :family "PlemolJP" :height 160)
-
-  ;; 行番号のフォントをPlemolJPに指定。これで桁がずれなくなる
   (face-remap-add-relative 'line-number :family "PlemolJP" :height 160)
-
-
-
-;; 日本語検索 (Migemo)
-(use-package migemo
-  :if (executable-find "cmigemo")
-  :config
-  (setq migemo-command "cmigemo")
-  (setq migemo-options '("-q" "--emacs"))
-  (setq migemo-dictionary "/opt/homebrew/share/migemo/utf-8/migemo-dict")
-  (migemo-init))
-
-  ;; 行間の設定
-  (setq-local line-spacing 0.15))
+  (setq-local line-spacing 0.1))
 
 ;; Org-mode 本体
 (use-package org
@@ -349,23 +395,36 @@
   :custom
   (org-startup-indented t)
   (org-hide-emphasis-markers t)
+  (org-image-actual-width nil)
+  (org-startup-with-inline-images t)
+  (org-src-fontify-natively t)
+  (org-src-tab-acts-natively t)
+  (org-edit-src-content-indentation 0))
 
-;; --- ここを追記 --- org-babel以降用
-  (org-src-fontify-natively t)    ; ブロック内を言語ごとの色にする
-  (org-src-tab-acts-natively t)   ; Tabを言語ごとの挙動にする
-  (org-edit-src-content-indentation 0) ; 無駄なインデントを防ぐ
-
-  
-  (org-startup-with-inline-images t))
-
-;; ブロック内の「地の文」の色を、現在のテーマの標準色にリセットする
+;; Org の face はロード後に一度だけまとめて設定
 (with-eval-after-load 'org
-  (set-face-attribute 'org-block nil :foreground 'unspecified))
+  (set-face-attribute 'org-table nil
+                      :family "PlemolJP"
+                      :height 170
+                      :foreground "#2aa198")
+  (set-face-attribute 'org-block nil
+                      :family "PlemolJP"
+                      :height 170
+                      :foreground 'unspecified)
+  (set-face-attribute 'org-code nil
+                      :family "PlemolJP"
+                      :height 170)
+  (set-face-attribute 'org-verbatim nil
+                      :family "PlemolJP"
+                      :height 170))
 
 
 (use-package olivetti
   :hook (org-mode . olivetti-mode)
   :custom (olivetti-body-width 90))
+
+
+(global-set-key (kbd "C-c l") 'org-store-link)
 
 ;; PDF Tools 設定
 (use-package pdf-tools
@@ -401,17 +460,17 @@
         ;; → 右側のサイドウィンドウに隔離して表示
         ("\\.pdf\\'"
          (display-buffer-in-side-window)
-         (side . right)
+         (side . left)
          (slot . 0)
          (window-width . 0.5))
-         ;;(preserve-size . (t . t))
+        ;;(preserve-size . (t . t))
 
         ;; 【ルールB】 Orgファイル (.org)
         ;; → Denoteなども含め、絶対に「今のウィンドウ」で開く
         ("\\.org$"
          (display-buffer-same-window)
          (inhibit-same-window . nil)) ; 「同じ窓禁止」フラグを明示的にOFFにする
-       ))
+	))
 
 
 (use-package org-pdftools
@@ -528,7 +587,16 @@
   :custom 
   (denote-directory "~/Documents/denote")
   (denote-file-type 'org)
-   ;;検索/候補の並びを “最終更新日時 (mtime)” 基準にする
+
+  ;; 先頭の [D] を消す
+  (denote-buffer-name-prefix "📓 ")
+
+  ;; title だけを buffer 名にする
+  ;; %t = front matter の TITLE（なければ適切に補完）
+  ;; %T = file name 上の TITLE
+  (denote-rename-buffer-format "%t")
+  
+  ;;検索/候補の並びを “最終更新日時 (mtime)” 基準にする
   (denote-query-sorting 'last-modified)
 
   :config
@@ -541,12 +609,176 @@
   :bind (("C-c n n" . denote)
          ("C-c n f" . denote-open-or-create)))
 
+;; ① 横断検索
+(use-package consult-notes
+  :ensure t
+  :after (consult denote)
+  :config (consult-notes-denote-mode)
+  :bind (("C-c n s" . consult-notes)
+         ("C-c n g" . consult-notes-search-in-all-notes)))
+
+;; ② ノート一覧
+(use-package denote-menu
+  :ensure t
+  :after denote
+  :bind ("C-c n m" . list-denotes))
+
 
 ;; EPUB閲覧用（警告消去のため）
 (use-package nov :ensure t)
 ;; DjVu閲覧用（警告消去のため）
 (use-package djvu :ensure t)
 
+#+end_src
+
+* org-export.el
+PDF出力をなんとか。
+#+begin_src elisp
+;; --------------------------------------------------
+;; Org → PDF export 設定
+;; --------------------------------------------------
+
+(with-eval-after-load 'ox-latex
+
+  ;; -----------------------------------------------------------------
+  ;; 1. 日本語用クラスの設定 (bxjsarticle)
+  ;;    [ja=luatex] と明示するのが LuaLaTeX では安定
+  ;; -----------------------------------------------------------------
+  (add-to-list 'org-latex-classes
+               '("bxjsarticle"
+                 "\\documentclass[ja=standard,lualatex,12pt,report]{bxjsarticle}
+                  [DEFAULT-PACKAGES]
+                  [PACKAGES]
+                  [EXTRA]"
+                 ("\\section{%s}"       . "\\section*{%s}")
+                 ("\\subsection{%s}"    . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}"     . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}"  . "\\subparagraph*{%s}")))
+
+  ;; -----------------------------------------------------------------
+  ;; 2. デフォルトのクラスとコンパイラ
+  ;; -----------------------------------------------------------------
+  (setq org-latex-default-class "bxjsarticle")
+  (setq org-latex-compiler "lualatex")
+  (setq org-export-coding-system 'utf-8)
+
+  ;; -----------------------------------------------------------------
+  ;; 3. latexmk の設定
+  ;;    -halt-on-error: エラー時に黙って固まらず即停止（デバッグが楽）
+  ;;    -file-line-error: エラー箇所を file:line 形式で表示
+  ;;    2行目: 中間ファイル(.aux .log .out など)を掃除
+  ;; -----------------------------------------------------------------
+  (setq org-latex-pdf-process
+        '("latexmk -lualatex -interaction=nonstopmode -shell-escape -file-line-error -halt-on-error -output-directory=%o %f"
+          "latexmk -c -output-directory=%o %f"))
+
+  ;; -----------------------------------------------------------------
+  ;; 4. 追加パッケージ（見た目を整えるための定番セット）
+  ;;    booktabs : 綺麗な表罫線（\toprule \midrule \bottomrule）
+  ;;    longtable: ページまたぎの表
+  ;;    graphicx : 画像取り込み
+  ;;    xcolor   : 色指定
+  ;;    hyperref : リンク機能（hidelinks で赤枠を消す）
+  ;;    listings : コードブロックの整形（Pygments不要）
+  ;; -----------------------------------------------------------------
+  (add-to-list 'org-latex-packages-alist '("" "booktabs"  t))
+  (add-to-list 'org-latex-packages-alist '("" "longtable" t))
+  (add-to-list 'org-latex-packages-alist '("" "graphicx"  t))
+  (add-to-list 'org-latex-packages-alist '("" "xcolor"    t))
+
+  ;; -----------------------------------------------------------------
+  ;; 5. コードブロックの整形 (listings版)
+  ;;    minted に切り替えたい場合は、このブロックをコメントアウトして、
+  ;;    下の「minted版」のコメントアウトを外してください。
+  ;; -----------------------------------------------------------------
+  (add-to-list 'org-latex-packages-alist '("" "listings" t))
+  (setq org-latex-listings t)
+  (setq org-latex-listings-options
+        '(("basicstyle"       "\\ttfamily\\footnotesize")
+          ("keywordstyle"     "\\color{blue}\\bfseries")
+          ("commentstyle"     "\\color{gray}\\itshape")
+          ("stringstyle"      "\\color{teal}")
+          ("frame"            "single")
+          ("breaklines"       "true")
+          ("breakatwhitespace" "true")
+          ("showstringspaces" "false")
+          ("numbers"          "left")
+          ("numberstyle"      "\\tiny\\color{gray}")
+          ("xleftmargin"      "1em")))
+
+  ;; -----------------------------------------------------------------
+  ;; 5'. minted版（使う場合は↑をコメントアウトし、こちらを有効化）
+  ;;     注意: brew install pygments が必要
+  ;; -----------------------------------------------------------------
+  ;; (add-to-list 'org-latex-packages-alist '("" "minted" t))
+  ;; (setq org-latex-listings 'minted)
+  ;; (setq org-latex-minted-options
+  ;;       '(("frame"     "lines")
+  ;;         ("fontsize"  "\\footnotesize")
+  ;;         ("breaklines" "true")
+  ;;         ("linenos"   "true")))
+
+  ;; -----------------------------------------------------------------
+  ;; 6. 画像のデフォルト幅
+  ;;    org-download で挿入した #+ATTR_ORG: :width 400 が
+  ;;    PDFでも反映されるように、デフォルトの最大幅も設定
+  ;; -----------------------------------------------------------------
+  (setq org-latex-image-default-width "0.9\\linewidth")
+
+  ;; -----------------------------------------------------------------
+  ;; 7. ハイパーリンクの色設定（hidelinksより細かく制御したい場合）
+  ;;    現状はhidelinksで枠線を消す方針。色をつけたい場合は↓を有効化。
+  ;; -----------------------------------------------------------------
+  ;; (setq org-latex-hyperref-template
+  ;;       "\\hypersetup{
+  ;;          colorlinks=true,
+  ;;          linkcolor=black,
+  ;;          citecolor=blue,
+  ;;          urlcolor=blue,
+  ;;          pdfauthor={%a},
+  ;;          pdftitle={%t},
+  ;;          pdfkeywords={%k},
+  ;;          pdfsubject={%d},
+  ;;          pdfcreator={%c},
+  ;;          pdflang={%L}}\n")
+  )
+
+;; -------------------------------------------------------------------
+;; 8. 出力ヘルパー関数
+;;    PDFを生成して、できあがったファイルを自動で開く
+;; -------------------------------------------------------------------
+(defun my/org-export-pdf-and-open ()
+  "Org → PDF 出力後、生成された PDF を Emacs で開く。
+display-buffer-alist の設定により、PDFは左サイドウィンドウに表示される。"
+  (interactive)
+  (let ((pdf (org-latex-export-to-pdf)))
+    (if pdf
+        (progn
+          (find-file pdf)
+          (message "PDF generated: %s" pdf))
+      (message "PDF export failed. Check *Org PDF LaTeX Output* buffer."))))
+
+;; -------------------------------------------------------------------
+;; 9. リーダーキー (C-;) への登録
+;;    C-; e p : Export to PDF
+;;    C-; e o : Export to PDF & Open
+;;    C-; e h : Export to HTML
+;; -------------------------------------------------------------------
+(with-eval-after-load 'ox
+  (defvar-keymap tk-leader-export-map
+    :doc "Org export sub-menu"
+    "p" #'org-latex-export-to-pdf
+    "o" #'my/org-export-pdf-and-open
+    "h" #'org-html-export-to-html)
+  (keymap-set tk-leader-map "e" tk-leader-export-map)
+
+  (with-eval-after-load 'which-key
+    (which-key-add-keymap-based-replacements tk-leader-map
+      "e" "Export")))
+
+;; デフォルトで目次を入れない(必要なら #+OPTIONS: toc:t で個別に有効化)
+(setq org-export-with-toc nil)
 #+end_src
 
 * vba-mode
@@ -790,6 +1022,17 @@ Set to 0 to align with the previous line."
 
 * init-dev.el
 #+begin_src elisp
+
+;; カッコの閉じ忘れ・視認性対策
+(electric-pair-mode 1)   ; カッコを自動で閉じる
+(show-paren-mode 1)      ; 対応するカッコを光らせる
+(setq show-paren-delay 0)
+
+(use-package rainbow-delimiters
+  :ensure t
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+
 ;; Git連携 (Magit)
 (use-package magit
   :ensure t
@@ -837,9 +1080,16 @@ Set to 0 to align with the previous line."
 (require 'vba-mode)
 
 
-;;------------------------------
-;; ESS Emacs Speaks Statistics)
-;;------------------------------
+(use-package yaml-mode
+  :ensure t
+  :mode ("\\.ya?ml\\'" . yaml-mode))
+
+
+#+end_src
+
+* ESS関係
+#+begin_src elisp
+
 (use-package ess
   :ensure t
   :init
@@ -848,58 +1098,158 @@ Set to 0 to align with the previous line."
   ;; 起動時に作業ディレクトリをいちいち聞かれないようにする（ストレス緩和）
   (setq ess-ask-for-project-root nil))
 
-
 #+end_src
-
-* init-keybindings.el
+* Elfeed/RSS関係
 #+begin_src elisp
-;; -----------------------------------------------------------------------------
-;; 1. リーダーキーの定義 (C-; を起点にする)
-;; -----------------------------------------------------------------------------
-(defvar-keymap tk-leader-map
-  :doc "TK先生の『ホームポジション・メニュー』"
-  ;; 基本操作 (File, Buffer, Save)
-  "f" #'find-file             ; [f]ile
-  "b" #'consult-buffer        ; [b]uffer
-  "s" #'save-buffer           ; [s]ave
-  "p" #'project-find-file     ; [p]roject
-  "k" #'kill-current-buffer   ; [k]ill
-  "d" #'dired-jump            ; [d]ired: 今のファイルの場所をファイラーで開く
-  
-  ;; 検索操作 (Search/Grep)
-  "l" #'consult-line          ; [l]ine: 今のファイル内
-  "g" #'consult-grep          ; [g]rep: フォルダ内
-  "r" #'consult-ripgrep       ; [r]ipgrep: 爆速検索
+;; -------------------------------------------------------------------
+;; Elfeed: Emacs RSS/Atom Reader
+;; -------------------------------------------------------------------
+(use-package elfeed
+  :ensure t
+  :custom
+  ;; データベースの場所(バックアップ対象にしておくと安心)
+  (elfeed-db-directory (expand-file-name "elfeed/db" user-emacs-directory))
+  ;; 一覧表示で日付の右側に出る幅
+  (elfeed-search-title-max-width 100)
+  (elfeed-search-title-min-width 30)
+  ;; デフォルトの検索フィルタ(起動時に表示される条件)
+  ;; @2-week-ago = 2週間以内、+unread = 未読のみ
+  (elfeed-search-filter "@2-week-ago +unread")
+  :config
+  ;; 日本語の記事タイトルが化けないように
+  (set-face-attribute 'elfeed-search-title-face nil :family "Hiragino Kaku Gothic Pro")
+  (set-face-attribute 'elfeed-search-unread-title-face nil :family "Hiragino Kaku Gothic Pro" :weight 'bold))
 
-  ;; 今後増やしていく枠
-  "o" nil                     ; [o]rg-mode
-  "v" nil)                    ; [v]iewer / PDF
+;; -------------------------------------------------------------------
+;; elfeed-org: フィードをOrg-modeファイルで管理
+;; -------------------------------------------------------------------
+(use-package elfeed-org
+  :ensure t
+  :demand t
+  :custom
+  (rmh-elfeed-org-files (list (expand-file-name "elfeed.org" user-emacs-directory)))
+  :config
+  (elfeed-org))
 
-;; 全体で C-; を入り口に設定
-(keymap-set global-map "C-;" tk-leader-map)
+;; -------------------------------------------------------------------
+;; リーダーキーへの登録: C-; n (News)
+;; ※ "e" は Export で使用済みのため "n" を割り当て
+;; -------------------------------------------------------------------
+(defvar-keymap tk-leader-news-map
+  :doc "Elfeed / News sub-menu"
+  "n" #'elfeed                         ; メイン起動
+  "u" #'elfeed-update                  ; 全フィード更新
+  "r" #'elfeed-org                     ; elfeed.org を再読込
+  "G" #'elfeed-search-fetch)           ; 強制再取得
+(keymap-set tk-leader-map "n" tk-leader-news-map)
 
-;; -----------------------------------------------------------------------------
-;; 2. which-key のラベル修正
-;; -----------------------------------------------------------------------------
 (with-eval-after-load 'which-key
-  (which-key-add-keymap-based-replacements global-map "C-;" "Leader"))
-
-
-;; Mac標準ショートカットと行操作
-(global-set-key (kbd "s-a") 'mark-whole-buffer)
-(global-set-key (kbd "s-v") 'yank)
-(global-set-key (kbd "s-s") 'save-buffer)
-(global-set-key (kbd "s-w") 'kill-current-buffer)
-(global-set-key (kbd "s-q") 'save-buffers-kill-emacs)
-(global-set-key (kbd "s-t") #'tab-new)
-(global-set-key (kbd "s-{") #'tab-previous)
-(global-set-key (kbd "s-}") #'tab-next)
-
-;; Command + 矢印キー でウィンドウ間を移動
-(define-key global-map (kbd "s-<left>")  'windmove-left)
-(define-key global-map (kbd "s-<right>") 'windmove-right)
-(define-key global-map (kbd "s-<up>")    'windmove-up)
-(define-key global-map (kbd "s-<down>")  'windmove-down)
+  (which-key-add-keymap-based-replacements tk-leader-map
+    "n" "News (Elfeed)"))
 
 #+end_src
 
+
+
+* 翻訳関係
+#+begin_src emacs-lisp
+;; --- osx-dictionary (単語検索用) ---
+(use-package osx-dictionary
+  :ensure t
+  :bind (("C-c d" . osx-dictionary-search-pointer)    ; カーソル下の単語を検索
+         ("C-c i" . osx-dictionary-search-input)))    ; 入力して検索
+
+;; --- gt (Go Translate) ---
+(use-package gt
+  :ensure t
+  :bind (("C-c t" . gt-do-translate))
+  :config
+  (setq gt-langs '(en ja))
+  (require 'gt-engine-google)
+  (require 'gt-render-posframe)
+
+  ;; 通常バッファ用
+  (setq gt-default-translator
+        (gt-translator
+         :taker   (gt-taker :text 'buffer :pick 'region-or-paragraph :prompt 'disable)
+         :engines (gt-google-engine)
+         :render  (gt-buffer-render)))
+
+  ;; PDF用：引数エラー回避のため taker を動的に生成する関数
+  (defun my/pdf-translate-at-point ()
+    "PDFで選択範囲があればそれを、なければカーソル下の単語を翻訳"
+    (interactive)
+    (let ((text (if (pdf-view-active-region-p)
+                    (mapconcat 'identity (pdf-view-active-region-text) " ")
+                  (thing-at-point 'word t))))
+      (when text
+        (let* ((clean-text (replace-regexp-in-string "\n" " " text))
+               ;; 実行時にテキストを保持した translator を作成
+               (temp-translator (gt-translator
+                                 :taker (gt-taker :text clean-text :prompt 'disable)
+                                 :engines (gt-google-engine)
+                                 :render (gt-posframe-pop-render
+					  :width 80
+					  :height 20))))
+          (gt-start temp-translator)))))
+
+  (with-eval-after-load 'pdf-view
+    (define-key pdf-view-mode-map (kbd "d") #'my/pdf-translate-at-point)))
+
+#+end_src
+
+* AI関係
+#+begin_src emacs-lisp
+;; 1. .env ファイルを読み込んで環境変数を設定
+(let ((env-file (expand-file-name ".env" user-emacs-directory)))
+  (when (file-exists-p env-file)
+    (load-file env-file)))
+
+;; 2. gptel のインストールと設定
+(use-package gptel
+  :ensure t
+  :bind (("C-c g" . gptel-send)         ;; 選択範囲や現在行をAIに送信
+         ("C-c c" . gptel-menu))         ;; 設定メニュー（モデル変更など）を開く
+  :config
+  ;; Gemini をバックエンドとして登録
+  (setq-default gptel-backend
+                (gptel-make-gemini "Gemini"
+                  :key (getenv "GEMINI_API_KEY") ;; .env で設定した変数名
+                  :stream t))
+  
+  ;; デフォルトのモデルを指定（必要に応じて最新の gemini-2.0-flash などに変更可能）
+  (setq gptel-model 'gemini-1.5-flash))
+#+end_src
+* 論文管理関係
+#+begin_src emacs-lisp
+(use-package citar
+  :ensure t
+  :custom
+  (citar-bibliography '("~/Documents/better_bibtex/library.bib"))
+  (citar-library-paths '("~/Zotero/storage"))
+  (citar-file-open-functions
+   '(("pdf" . find-file))))
+
+(with-eval-after-load 'oc
+  (require 'citar-org)
+  (setq org-cite-insert-processor 'citar
+        org-cite-follow-processor 'citar
+        org-cite-activate-processor 'citar))
+
+
+#+end_src
+
+
+
+* 今後の検討項目
+- valign: Org-modeやMarkdownの表（Table）を、日本語が混じっていても綺麗に整列させて表示します。院内のシフト表や手術予定などを整理する際に、表示が崩れないのは大きなメリットです。
+
+- org-table-highlight
+   テーブルに色つけられるらしい
+
+   
+Consult-notes
+
+embark
+
+projectile ：プロジェクト管理
