@@ -32,7 +32,7 @@
   :ensure t
   :hook (prog-mode . rainbow-delimiters-mode))
 
-;; 3. パッケージ管理 (標準 package.el)
+パッケージ管理 (標準 package.el)
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
@@ -40,7 +40,7 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
-;; 4. フォントと外見の基本設定
+フォントと外見の基本設定
 (defun my/setup-fonts ()
   (interactive)
   (when (member "PlemolJP" (font-family-list))
@@ -51,6 +51,12 @@
 (setq inhibit-startup-message t)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
+
+
+(use-package savehist
+  :init
+  (savehist-mode 1)
+  (setq history-length 100))
 
 
 ;; 行番号表示に関する設定

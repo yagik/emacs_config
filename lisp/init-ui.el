@@ -30,11 +30,6 @@
 (add-hook 'after-load-theme-hook #'my/org-headline-colors-spacemacs-dark)
 
 
-(use-package savehist
-  :init
-  (savehist-mode 1)
-  (setq history-length 100))
-
 (use-package which-key
   :ensure nil  ; ★Emacs 30では組み込みなので、ダウンロード不要
   :init
@@ -46,9 +41,15 @@
   (setq which-key-side-window-location 'bottom))
 
 
-
 ;; モダンUI & 補完 (Vertico, Consult)
-(use-package vertico :init (vertico-mode 1))
+(use-package vertico
+  :init
+  (vertico-mode 1)
+  :config
+  ;; 履歴（選んだ回数や新しさ）を最優先し、
+  ;; それ以外はアルファベット順に並べる「賢いソート」を有効にします。
+  (setq vertico-sort-function #'vertico-sort-history-alpha))
+
 (use-package marginalia :init (marginalia-mode 1))
 (use-package orderless :custom (completion-styles '(orderless basic)))
 

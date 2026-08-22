@@ -32,7 +32,6 @@ denote#+TITLE: My Emacs config
 (setenv "PATH"
         (concat "/Library/TeX/texbin:"
                 (getenv "PATH")))
-
 ;;パッケージ管理 (標準 package.el)
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
@@ -40,6 +39,11 @@ denote#+TITLE: My Emacs config
 
 (require 'use-package)
 (setq use-package-always-ensure t)
+
+;; (Emacs 30 以下では set-local 等の新関数をこれが供給する)
+(use-package compat
+  :ensure t
+  :demand t)
 
 ;; UIのノイズをカット
 (setq inhibit-startup-message t)
@@ -82,8 +86,9 @@ denote#+TITLE: My Emacs config
                 custom-mode-hook))
   (add-hook hook (lambda () (display-line-numbers-mode -1))))
 
-;; 日本語入力中の挙動を安定させる
-(setq redisplay-dont-pause t)
+
+;; 日本語の行折り返しを文字カテゴリ基準にする（禁則処理が自然になる）
+(setq word-wrap-by-category t)
 
 ;; 防御的設定 (ファイル管理)
 (let ((backup-dir (expand-file-name "backups/" user-emacs-directory))
@@ -104,11 +109,16 @@ denote#+TITLE: My Emacs config
 #+end_src
 * init-keybindings.el
 #+begin_src elisp
+(global-unset-key (kbd "C-j"))
+;; AquqSKK用にC-jをアンバインドしてみる.
+
+
+
 ;; -----------------------------------------------------------------------------
 ;; 1. リーダーキーの定義 (C-; を起点にする)
 ;; -----------------------------------------------------------------------------
 (defvar-keymap tk-leader-map
-  :doc "TK先生の『ホームポジション・メニュー』"
+  :doc "Tの『ホームポジション・メニュー』"
   ;; 基本操作 (File, Buffer, Save)
   "f" #'find-file             ; [f]ile
   "b" #'consult-buffer        ; [b]uffer
@@ -349,7 +359,6 @@ denote#+TITLE: My Emacs config
 ;; Diredモードの時はbeacon（光るエフェクト）をオフにする
 (add-hook 'dired-mode-hook (lambda () (beacon-mode -1)))
 #+end_src
-
 * mode-line
 #+begin_src elisp
 (use-package doom-modeline
@@ -391,7 +400,9 @@ denote#+TITLE: My Emacs config
 
 ;; Org-mode 本体
 (use-package org
-  :hook (org-mode . my/org-mode-visual-settings)
+  :hook ((org-mode . my/org-mode-visual-settings)
+         (org-mode . visual-line-mode))
+
   :custom
   (org-startup-indented t)
   (org-hide-emphasis-markers t)
@@ -568,6 +579,16 @@ denote#+TITLE: My Emacs config
   :custom (org-modern-star nil)
   (org-modern-table nil))
 
+(use-package org-appear
+  :ensure t
+  :hook (org-mode . org-appear-mode)
+  :custom
+  (org-appear-autoemphasis t)   ; *bold* /italic/ =code= など
+  (org-appear-autolinks t)      ; [[リンク]] の展開
+  (org-appear-autosubmarkers t) ; 上付き・下付き文字
+  (org-appear-autoentities t)   ; \alpha などのエンティティ
+  (org-appear-inside-latex nil)); $数式$ 内部（不要ならnil）
+
 (use-package org-superstar
   :ensure t
   :after org
@@ -623,6 +644,14 @@ denote#+TITLE: My Emacs config
   :after denote
   :bind ("C-c n m" . list-denotes))
 
+;; org-babelで使える言語の設定
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '((emacs-lisp . t)
+   (python . t)))
+
+;; 使用するPythonを明示（任意だが確実）
+(setq org-babel-python-command "python3")
 
 ;; EPUB閲覧用（警告消去のため）
 (use-package nov :ensure t)
@@ -1028,6 +1057,9 @@ Set to 0 to align with the previous line."
 (show-paren-mode 1)      ; 対応するカッコを光らせる
 (setq show-paren-delay 0)
 
+;; Org-modeではカッコ自動補完を無効化
+(add-hook 'org-mode-hook (lambda () (electric-pair-local-mode -1)))
+
 (use-package rainbow-delimiters
   :ensure t
   :hook (prog-mode . rainbow-delimiters-mode))
@@ -1087,6 +1119,32 @@ Set to 0 to align with the previous line."
 
 #+end_src
 
+* 各種言語サポート
+#+begin_src elisp
+;; --- Markdown ---
+(use-package markdown-mode
+  :ensure t
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'"       . markdown-mode))
+  :init
+  (setq markdown-command          "pandoc"
+        markdown-enable-folding   t
+        markdown-fontify-code-blocks-natively t))  ; コードブロックを言語別ハイライト
+
+;; コードブロックを別バッファで編集 (対象言語のメジャーモードが有効になる)
+(use-package edit-indirect
+  :ensure t)
+
+;; Markdownバッファでorgのテーブル編集を流用
+(add-hook 'markdown-mode-hook #'orgtbl-mode)
+
+;; プレビュー: grip (要 pip install grip)
+;; ブラウザでGitHub風レンダリングをリアルタイム表示
+(use-package grip-mode
+  :ensure t
+  :bind (:map markdown-mode-command-map
+              ("g" . grip-mode)))
+#+end_src
 * ESS関係
 #+begin_src elisp
 
@@ -1239,17 +1297,6 @@ Set to 0 to align with the previous line."
 
 #+end_src
 
-
+r
 
 * 今後の検討項目
-- valign: Org-modeやMarkdownの表（Table）を、日本語が混じっていても綺麗に整列させて表示します。院内のシフト表や手術予定などを整理する際に、表示が崩れないのは大きなメリットです。
-
-- org-table-highlight
-   テーブルに色つけられるらしい
-
-   
-Consult-notes
-
-embark
-
-projectile ：プロジェクト管理

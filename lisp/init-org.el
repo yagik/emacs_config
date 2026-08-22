@@ -25,7 +25,7 @@
   (face-remap-add-relative 'line-number :family "PlemolJP" :height 160)
 
   ;; 行間の設定
-  (setq-local line-spacing 0.15))
+  (setq-local line-spacing 0.1))
 
 
 
@@ -35,7 +35,19 @@
   :custom
   (org-startup-indented t)
   (org-hide-emphasis-markers t)
-  (org-startup-with-inline-images t))
+  (org-startup-with-inline-images t)
+;; --- ここを追記 --- org-babel以降用
+  (org-src-fontify-natively t)    ; ブロック内を言語ごとの色にする
+  (org-src-tab-acts-natively t)   ; Tabを言語ごとの挙動にする
+  (org-edit-src-content-indentation 0) ; 無駄なインデントを防ぐ
+
+  
+
+
+;; ブロック内の「地の文」の色を、現在のテーマの標準色にリセットする
+(with-eval-after-load 'org
+  (set-face-attribute 'org-block nil :foreground 'unspecified))
+
 
 (use-package olivetti
   :hook (org-mode . olivetti-mode)
@@ -202,7 +214,16 @@
   :custom 
   (denote-directory "~/Documents/denote")
   (denote-file-type 'org)
-  :config (denote-rename-buffer-mode 1)
+   ;;検索/候補の並びを “最終更新日時 (mtime)” 基準にする
+  (denote-query-sorting 'last-modified)
+
+  :config
+  (denote-rename-buffer-mode 1)
+
+  ;; Savehistが読み込まれたタイミングで、denote専用の履歴変数も保存対象に加えます
+  (with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'denote-file-history))
+  
   :bind (("C-c n n" . denote)
          ("C-c n f" . denote-open-or-create)))
 
