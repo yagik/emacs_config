@@ -30,11 +30,10 @@
     (setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
     (add-to-list 'exec-path "/opt/homebrew/bin")
     (add-to-list 'exec-path "/usr/local/bin")
-    (add-to-list 'exec-path "/Library/TeX/texbin"))
+    (add-to-list 'exec-path "/Library/TeX/texbin")
+    ;; 外部プロセス（latexmk 等）からも TeX が見えるように PATH にも追加
+    (setenv "PATH" (concat "/Library/TeX/texbin:" (getenv "PATH"))))
 
-  (setenv "PATH"
-          (concat "/Library/TeX/texbin:"
-                  (getenv "PATH")))
   ;;パッケージ管理 (標準 package.el)
   (require 'package)
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
@@ -202,7 +201,12 @@
   (my/org-headline-colors-spacemacs-dark))
 
 ;; テーマを切り替えた後にも再適用（重要）
-(add-hook 'after-load-theme-hook #'my/org-headline-colors-spacemacs-dark)
+;; Emacs 29以降の標準フックは enable-theme-functions（引数にテーマ名が渡される）。
+;; ※以前の after-load-theme-hook は存在しないフックで、再適用されていなかった。
+(add-hook 'enable-theme-functions
+          (lambda (_theme)
+            (when (featurep 'org)          ; Org 未読み込み時は face が無いので何もしない
+              (my/org-headline-colors-spacemacs-dark))))
 
 #+end_src
 
@@ -287,7 +291,24 @@
   (setq migemo-command "cmigemo")
   (setq migemo-options '("-q" "--emacs"))
   (setq migemo-dictionary "/opt/homebrew/share/migemo/utf-8/migemo-dict")
-  (migemo-init))
+  (migemo-init)
+
+  ;; consult-line（C-s / s-f）でもローマ字で日本語を検索できるようにする。
+  ;; consult-line の候補カテゴリ consult-location にだけ migemo 入りの
+  ;; orderless スタイルを使う（ファイル名補完などは従来どおり）。
+  (with-eval-after-load 'orderless
+    (defun my/orderless-migemo (component)
+      "COMPONENT を migemo の正規表現に変換。不正な正規表現なら nil。"
+      (let ((pattern (migemo-get-pattern component)))
+        (condition-case nil
+            (progn (string-match-p pattern "") pattern)
+          (invalid-regexp nil))))
+    (orderless-define-completion-style my/orderless-migemo-style
+      (orderless-matching-styles '(orderless-literal
+                                   orderless-regexp
+                                   my/orderless-migemo)))
+    (add-to-list 'completion-category-overrides
+                 '(consult-location (styles my/orderless-migemo-style)))))
 
 
 (use-package undo-fu
@@ -384,7 +405,6 @@
   (doom-modeline-buffer-encoding t) ; 改行コードなどを表示
   (doom-modeline-indent-info t)  ; インデント幅を表示
   (doom-modeline-checkers t)     ; Flymakeなどのエラー数を表示
-  (doom-modeline-word-count t)
   
   ;; --- 外見の微調整 ---
   (doom-modeline-theme 'catppuccin)) ; または 'catppuccin' など
@@ -602,7 +622,8 @@
   (org-superstar-remove-leading-stars t)
 
   ;; ここが “味” の部分：見出しレベルごとの bullet
-  (setq org-superstar-headline-bullets-list '("◉" "○" "✸" "✿" "•" "·" "·"))  
+  ;; ※ :custom 内では setq を使わず (変数 値) の形で書く
+  (org-superstar-headline-bullets-list '("◉" "○" "✸" "✿" "•" "·" "·"))
   ;; 箇条書きの点も変えたい場合（不要ならこの行は消してOK）
   (org-superstar-item-bullet-alist '((?+ . ?•) (?- . ?•) (?* . ?•))))
 
@@ -1285,8 +1306,9 @@ Set to 0 to align with the previous line."
                   :key (getenv "GEMINI_API_KEY") ;; .env で設定した変数名
                   :stream t))
   
-  ;; デフォルトのモデルを指定（必要に応じて最新の gemini-2.0-flash などに変更可能）
-  (setq gptel-model 'gemini-1.5-flash))
+  ;; デフォルトのモデル。gemini-1.5-flash は提供終了済みのため変更（2026-09）。
+  ;; 使えるモデルは C-c c (gptel-menu) で確認・切替できる。
+  (setq gptel-model 'gemini-3.7-flash))
 #+end_src
 * 論文管理関係
 #+begin_src emacs-lisp
@@ -1306,7 +1328,5 @@ Set to 0 to align with the previous line."
 
 
 #+end_src
-
-r
 
 * 今後の検討項目
