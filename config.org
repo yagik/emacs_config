@@ -1,111 +1,114 @@
-denote#+TITLE: My Emacs config
+#+TITLE: My Emacs config
 #+AUTHOR: Toshi Kasuga
 #+STARTUP: content
 
 * init-base.el
 #+begin_src elisp
-;; 起動高速化とMac最適化
-(setq gc-cons-threshold (* 100 1024 1024))
-(add-hook 'emacs-startup-hook (lambda () (setq gc-cons-threshold (* 2 1024 1024))))
 
-(setq native-comp-async-report-warnings-errors 'silent)
+  ;; -*- lexical-binding: t -*-
 
+  ;; 起動高速化とMac最適化
+  (setq gc-cons-threshold (* 100 1024 1024))
+  (add-hook 'emacs-startup-hook (lambda () (setq gc-cons-threshold (* 2 1024 1024))))
 
-(set-language-environment "Japanese")
-(prefer-coding-system 'utf-8)
-
-;; 起動時のウインドウサイズと位置
-(setq initial-frame-alist '((width . 120) (height . 50) (top . 50) (left . 100)))
-(setq default-frame-alist '((width . 120) (height . 50)))
-
-;; Macのキー設定
-(setq mac-command-modifier 'super)
-(setq mac-option-modifier 'meta)
-
-;; Homebrew等のパスを通す
-(when (eq system-type 'darwin)
-  (setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
-  (add-to-list 'exec-path "/opt/homebrew/bin")
-  (add-to-list 'exec-path "/usr/local/bin")
-  (add-to-list 'exec-path "/Library/TeX/texbin"))
-
-(setenv "PATH"
-        (concat "/Library/TeX/texbin:"
-                (getenv "PATH")))
-;;パッケージ管理 (標準 package.el)
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(package-initialize)
-
-(require 'use-package)
-(setq use-package-always-ensure t)
-
-;; (Emacs 30 以下では set-local 等の新関数をこれが供給する)
-(use-package compat
-  :ensure t
-  :demand t)
-
-;; UIのノイズをカット
-(setq inhibit-startup-message t)
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-
-(use-package savehist
-  :init
-  (savehist-mode 1)
-  (setq history-length 100))
-
-(use-package recentf
-  :ensure nil
-  :init
-  (recentf-mode 1)
-  :custom
-  (recentf-max-saved-items 300)
-  (recentf-auto-cleanup 'never))
-
-;; Completion: 大文字/小文字を無視（Denote / find-file / consult 全部に効く）
-(setq completion-ignore-case t)
-(setq read-file-name-completion-ignore-case t)
-(setq read-buffer-completion-ignore-case t)
-
-;; 行番号表示に関する設定
-(global-display-line-numbers-mode t)
-;; 't (絶対行) 、'relative (相対行) 
-(setq display-line-numbers-type t)
-
-;; 3. 桁数が増えても横にガタつかないようにする（必須設定）
-(setq display-line-numbers-width-start t)
-
-;; 4.行番号のフォントだけ固定幅にする
-;; プロポーショナルフォントを全体で使っていても、行番号のズレを防げます
-(set-face-attribute 'line-number nil :inherit 'fixed-pitch)
-
-;; 5. 特定のモード（ミニバッファやヘルプなど）では表示しない
-(dolist (hook '(help-mode-hook
-                info-mode-hook
-                custom-mode-hook))
-  (add-hook hook (lambda () (display-line-numbers-mode -1))))
+  (setq native-comp-async-report-warnings-errors 'silent)
 
 
-;; 日本語の行折り返しを文字カテゴリ基準にする（禁則処理が自然になる）
-(setq word-wrap-by-category t)
+  (set-language-environment "Japanese")
+  (prefer-coding-system 'utf-8)
 
-;; 防御的設定 (ファイル管理)
-(let ((backup-dir (expand-file-name "backups/" user-emacs-directory))
-      (auto-save-dir (expand-file-name "auto-saves/" user-emacs-directory)))
-  (unless (file-exists-p backup-dir) (make-directory backup-dir t))
-  (unless (file-exists-p auto-save-dir) (make-directory auto-save-dir t))
-  (setq backup-directory-alist `((".*" . ,backup-dir))
-        auto-save-file-name-transforms `((".*" ,auto-save-dir t))
-        create-lockfiles nil))
+  ;; 起動時のウインドウサイズと位置
+  (setq initial-frame-alist '((width . 120) (height . 50) (top . 50) (left . 100)))
+  (setq default-frame-alist '((width . 120) (height . 50)))
+
+  ;; Macのキー設定
+  (setq mac-command-modifier 'super)
+  (setq mac-option-modifier 'meta)
+
+  ;; Homebrew等のパスを通す
+  (when (eq system-type 'darwin)
+    (setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
+    (add-to-list 'exec-path "/opt/homebrew/bin")
+    (add-to-list 'exec-path "/usr/local/bin")
+    (add-to-list 'exec-path "/Library/TeX/texbin"))
+
+  (setenv "PATH"
+          (concat "/Library/TeX/texbin:"
+                  (getenv "PATH")))
+  ;;パッケージ管理 (標準 package.el)
+  (require 'package)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+  (package-initialize)
+
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+
+  ;; (Emacs 30 以下では set-local 等の新関数をこれが供給する)
+  (use-package compat
+    :ensure t
+    :demand t)
+
+  ;; UIのノイズをカット
+  (setq inhibit-startup-message t)
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+
+  (use-package savehist
+    :init
+    (savehist-mode 1)
+    (setq history-length 100))
+
+  (use-package recentf
+    :ensure nil
+    :init
+    (recentf-mode 1)
+    :custom
+    (recentf-max-saved-items 300)
+    (recentf-auto-cleanup 'never))
+
+  ;; Completion: 大文字/小文字を無視（Denote / find-file / consult 全部に効く）
+  (setq completion-ignore-case t)
+  (setq read-file-name-completion-ignore-case t)
+  (setq read-buffer-completion-ignore-case t)
+
+  ;; 行番号表示に関する設定
+  (global-display-line-numbers-mode t)
+  ;; 't (絶対行) 、'relative (相対行) 
+  (setq display-line-numbers-type t)
+
+  ;; 3. 桁数が増えても横にガタつかないようにする（必須設定）
+  (setq display-line-numbers-width-start t)
+
+  ;; 4.行番号のフォントだけ固定幅にする
+  ;; プロポーショナルフォントを全体で使っていても、行番号のズレを防げます
+  (set-face-attribute 'line-number nil :inherit 'fixed-pitch)
+
+  ;; 5. 特定のモード（ミニバッファやヘルプなど）では表示しない
+  (dolist (hook '(help-mode-hook
+                  info-mode-hook
+                  custom-mode-hook))
+    (add-hook hook (lambda () (display-line-numbers-mode -1))))
 
 
-;; 行の移動の挙動の設定
-;; スクロールを滑らかにする (Emacs 29以降の標準機能)
-(pixel-scroll-precision-mode t)
-(setq scroll-conservatively 101)
-(setq scroll-margin 0)
-(setq maximum-scroll-margin 0.1) ; 画面全体の10%以上はマージンを作らない
+  ;; 日本語の行折り返しを文字カテゴリ基準にする（禁則処理が自然になる）
+  (setq word-wrap-by-category t)
+
+  ;; 防御的設定 (ファイル管理)
+  (let ((backup-dir (expand-file-name "backups/" user-emacs-directory))
+        (auto-save-dir (expand-file-name "auto-saves/" user-emacs-directory)))
+    (unless (file-exists-p backup-dir) (make-directory backup-dir t))
+    (unless (file-exists-p auto-save-dir) (make-directory auto-save-dir t))
+    (setq backup-directory-alist `((".*" . ,backup-dir))
+          auto-save-file-name-transforms `((".*" ,auto-save-dir t))
+          create-lockfiles nil))
+
+
+  ;; 行の移動の挙動の設定
+  ;; スクロールを滑らかにする (Emacs 29以降の標準機能)
+  (pixel-scroll-precision-mode t)
+  (setq scroll-conservatively 101)
+  (setq scroll-margin 0)
+  (setq maximum-scroll-margin 0.1) ; 画面全体の10%以上はマージンを作らない
 #+end_src
 * init-keybindings.el
 #+begin_src elisp
@@ -330,21 +333,21 @@ denote#+TITLE: My Emacs config
 ;; -----------------------------------------------------------------------------
 (use-package sis
   :ensure t
+  :custom
+  (sis-prefix-override-keys '("C-c" "C-x" "C-h" "C-;"))
+
   :config
   (sis-ism-lazyman-config
    "com.apple.keylayout.US"
    "com.google.inputmethod.Japanese.base")
 
-  ;; ★ここが本命：リーダーキーを「prefix override」に追加
-  (add-to-list 'sis-prefix-override-keys "C-;")
-
   ;; prefix key を英語に落とす機能は respect-mode が担当
   (sis-global-respect-mode t)
 
-  ;; （任意）カーソル色
-  (setq sis-cursor-color-indicator '("#FF9500" "#4285F4" "red"))
+  ;; カーソル色をそれぞれのモードで変更する。
+  (setq sis-default-cursor-color "#0A84FF")   ; 英数：Blue
+  (setq sis-other-cursor-color   "#f38ba8")   ; 日本語：Red
   (sis-global-cursor-color-mode t))
-
 
 
 (use-package posframe
@@ -658,6 +661,13 @@ denote#+TITLE: My Emacs config
 ;; DjVu閲覧用（警告消去のため）
 (use-package djvu :ensure t)
 
+
+;; org-tableをきれいにする
+;; ただ、テーブルの数が増えると動作速度の低下が問題。
+;; 一旦Offにしておく。
+;; (use-package valign
+;;   :ensure t
+;;   :hook (org-mode . valign-mode))
 #+end_src
 
 * org-export.el
