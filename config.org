@@ -9,19 +9,11 @@
 
   ;; -*- lexical-binding: t -*-
 
-  ;; 起動高速化とMac最適化
-  (setq gc-cons-threshold (* 100 1024 1024))
-  (add-hook 'emacs-startup-hook (lambda () (setq gc-cons-threshold (* 2 1024 1024))))
-
-  (setq native-comp-async-report-warnings-errors 'silent)
+  ;; ※ GC 設定・ネイティブコンパイル警告・ウィンドウサイズは early-init.el に移動
 
 
   (set-language-environment "Japanese")
   (prefer-coding-system 'utf-8)
-
-  ;; 起動時のウインドウサイズと位置
-  (setq initial-frame-alist '((width . 120) (height . 50) (top . 50) (left . 100)))
-  (setq default-frame-alist '((width . 120) (height . 50)))
 
   ;; Macのキー設定
   (setq mac-command-modifier 'super)
@@ -799,10 +791,14 @@
 
 ** EPUB / DjVu ビューア・表示の保留事項
 #+begin_src elisp
-;; EPUB閲覧用（警告消去のため）
-(use-package nov :ensure t)
-;; DjVu閲覧用（警告消去のため）
-(use-package djvu :ensure t)
+;; EPUB閲覧用（警告消去のため）: .epub を開いたときだけ読み込む
+(use-package nov
+  :ensure t
+  :mode ("\\.epub\\'" . nov-mode))
+;; DjVu閲覧用（警告消去のため）: .djvu を開いたときだけ読み込む（関連付けは autoload 済み）
+(use-package djvu
+  :ensure t
+  :defer t)
 
 
 ;; org-tableをきれいにする
@@ -1070,7 +1066,8 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 
 ;; コードブロックを別バッファで編集 (対象言語のメジャーモードが有効になる)
 (use-package edit-indirect
-  :ensure t)
+  :ensure t
+  :defer t)
 
 ;; Markdownバッファでorgのテーブル編集を流用
 (add-hook 'markdown-mode-hook #'orgtbl-mode)
@@ -1087,8 +1084,9 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 
 (use-package ess
   :ensure t
-  :init
-  (require 'ess-site)
+  ;; 起動時には読み込まず、.R ファイルを開く／M-x R したときに読み込む
+  ;; （以前は :init で (require 'ess-site) しており毎回起動時に読み込んでいた）
+  :defer t
   :config
   ;; 起動時に作業ディレクトリをいちいち聞かれないようにする（ストレス緩和）
   (setq ess-ask-for-project-root nil))
@@ -1102,6 +1100,8 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 ;; -------------------------------------------------------------------
 (use-package elfeed
   :ensure t
+  ;; 起動時には読み込まず、C-; n n などで使うときに読み込む
+  :defer t
   :custom
   ;; データベースの場所(バックアップ対象にしておくと安心)
   (elfeed-db-directory (expand-file-name "elfeed/db" user-emacs-directory))
@@ -1121,7 +1121,9 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 ;; -------------------------------------------------------------------
 (use-package elfeed-org
   :ensure t
-  :demand t
+  ;; elfeed が読み込まれた直後に一緒に読み込み、フィード一覧を反映する
+  ;; （以前は :demand t で起動時に elfeed ごと読み込んでいた）
+  :after elfeed
   :custom
   (rmh-elfeed-org-files (list (expand-file-name "elfeed.org" user-emacs-directory)))
   :config

@@ -8,6 +8,8 @@
 !/config.org
 # config.org を読み込む起動の入口
 !/init.el
+# 起動の最初期に読まれる設定（GC・ウィンドウ）
+!/early-init.el
 # Customize の保存先。package-selected-packages を新環境での復元に使う
 !/custom.el
 # 自作ライブラリ（lisp/ のうち vba-mode.el だけ追跡）
