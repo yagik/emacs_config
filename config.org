@@ -130,6 +130,7 @@
 | C-; j t/n       | 定型文の挿入 / 新規作成                 | 日本語の文章編集      |
 | C-; j l         | textlint で校正                         | 日本語の文章編集      |
 | C-; j p/c/w     | 句読点の統一 / 文字数 / 空白表示        | 日本語の文章編集      |
+| C-; e w         | Word (.docx) 書き出し（pandoc）         | Org → PDF 出力        |
 | C-; e p/o/h     | PDF出力 / PDF出力して開く / HTML出力    | Org → PDF 出力       |
 | C-; n n/u/r/G   | Elfeed 起動 / 更新 / 再読込 / 再取得    | ツール > RSS          |
 | C-c n n/f/s/g/m | Denote 作成 / 開く / 検索 / 全文 / 一覧 | Org > Denote          |
@@ -1121,6 +1122,39 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 
 ;; デフォルトで目次を入れない(必要なら #+OPTIONS: toc:t で個別に有効化)
 (setq org-export-with-toc nil)
+#+end_src
+
+** Word 書き出し (pandoc)
+Org ファイルを pandoc で .docx に変換する。書式をそろえたい場合は
+=pandoc/reference.docx= を置くと、その見出しスタイル等を使う
+（作り方: =pandoc -o reference.docx --print-default-data-file reference.docx=）。
+#+begin_src elisp
+(defun my/org-export-to-docx (&optional open)
+  "現在の Org ファイルを pandoc で .docx に書き出す。
+C-u 付きで呼ぶと、書き出した後にそのファイルを開く。"
+  (interactive "P")
+  (unless (executable-find "pandoc")
+    (user-error "pandoc が見つかりません（brew install pandoc）"))
+  (unless (buffer-file-name)
+    (user-error "先にファイルとして保存してください"))
+  (save-buffer)
+  (let* ((src (buffer-file-name))
+         (dst (concat (file-name-sans-extension src) ".docx"))
+         (ref (expand-file-name "pandoc/reference.docx" user-emacs-directory))
+         (args (append (list src "-o" dst "--from=org" "--standalone")
+                       (when (file-exists-p ref)
+                         (list (concat "--reference-doc=" ref)))))
+         (buf (get-buffer-create "*pandoc*")))
+    (with-current-buffer buf (erase-buffer))
+    (if (zerop (apply #'call-process "pandoc" nil buf nil args))
+        (progn
+          (message "Word ファイルを書き出しました: %s" dst)
+          (when open (find-file dst)))
+      (display-buffer buf)
+      (user-error "pandoc の変換に失敗しました（*pandoc* バッファを確認してください）"))))
+
+;; C-; e w : Export to Word
+(keymap-set tk-leader-export-map "w" #'my/org-export-to-docx)
 #+end_src
 
 * 開発
