@@ -1112,9 +1112,22 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
   ;; @2-week-ago = 2週間以内、+unread = 未読のみ
   (elfeed-search-filter "@2-week-ago +unread")
   :config
-  ;; 日本語の記事タイトルが化けないように
-  (set-face-attribute 'elfeed-search-title-face nil :family my/font-prose)
-  (set-face-attribute 'elfeed-search-unread-title-face nil :family my/font-prose :weight 'bold))
+  ;; 日本語の記事タイトルが化けないように＋色をテーマ任せにせず指定する
+  ;; （catppuccin では未読タイトルが赤系になるため、Org 見出しと同じ青系にそろえる）
+  (defun my/elfeed-search-faces ()
+    "Elfeed 一覧のタイトルのフォントと色を設定する。"
+    (set-face-attribute 'elfeed-search-title-face nil
+                        :family my/font-prose
+                        :foreground "#7f849c")            ; 既読：控えめなグレー
+    (set-face-attribute 'elfeed-search-unread-title-face nil
+                        :family my/font-prose
+                        :weight 'bold
+                        :foreground "#4f97d7"))           ; 未読：Org 見出しと同じ青
+  (my/elfeed-search-faces)
+  ;; テーマを切り替えたときも色が戻らないように再適用する
+  (add-hook 'enable-theme-functions
+            (lambda (_theme)
+              (when (featurep 'elfeed) (my/elfeed-search-faces)))))
 
 ;; -------------------------------------------------------------------
 ;; elfeed-org: フィードをOrg-modeファイルで管理
