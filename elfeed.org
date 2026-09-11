@@ -1,0 +1,36 @@
+#+TITLE: Elfeed フィード一覧
+#+STARTUP: content
+
+このファイルは elfeed-org が読み込む RSS/Atom フィードの一覧。
+（config.org の「ツール > RSS (Elfeed)」で rmh-elfeed-org-files に指定している）
+
+* 書き方のメモ
+- =:elfeed:= タグの付いた見出しの下だけが読み込まれる。
+- 見出しに URL を書くと、それが 1 つのフィードになる。
+- 見出しに付けたタグは下の見出しにも引き継がれ、Elfeed での絞り込みに使える
+  （例: 検索フィルタに =+pubmed= と入れる）。
+- URL ではない見出し（「眼科」など）は、フィードのグループ分けとタグ付けのためだけに使う。
+- 追加・変更したら C-; n r（elfeed-org 再読込）→ C-; n u（全フィード更新）。
+
+#+begin_example
+,* フィード :elfeed:
+,** 眼科 :ophthalmology:
+,*** PubMed 検索（例: 多焦点IOL） :pubmed:
+,**** https://pubmed.ncbi.nlm.nih.gov/rss/search/xxxxxxxx/?limit=20&... :iol:
+,** ニュース :news:
+,*** https://example.com/feed.xml
+#+end_example
+
+** PubMed の検索 RSS の作り方
+1. PubMed (https://pubmed.ncbi.nlm.nih.gov/) で検索する。
+2. 検索ボックスの下にある「Create RSS」を押す。
+3. 表示件数を選び、「Create RSS」→ 表示された URL をコピー。
+4. 下の「フィード」の中に、その URL を見出しとして貼り付ける。
+
+* フィード :elfeed:
+** 眼科 :ophthalmology:
+*** PubMed :pubmed:
+# ↓ ここに PubMed の RSS URL を「**** URL」の形で追加する
+
+** その他 :misc:
+# ↓ ここにその他のフィードを「*** URL」の形で追加する
