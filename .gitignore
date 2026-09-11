@@ -21,6 +21,9 @@
 !/textlint/prh.yml
 !/textlint/package.json
 !/textlint/package-lock.json
+# yasnippet の雛形
+!/snippets/
+!/snippets/**
 # 自作ライブラリ（lisp/ のうち vba-mode.el だけ追跡）
 !/lisp/
 /lisp/*

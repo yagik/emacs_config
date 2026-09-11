@@ -127,6 +127,7 @@
 | キー            | 機能                                    | 設定場所              |
 |-----------------+-----------------------------------------+-----------------------|
 | C-;             | リーダーキー（下記サブメニュー）        | キー操作              |
+| C-; j t/n       | 定型文の挿入 / 新規作成                 | 日本語の文章編集      |
 | C-; j l         | textlint で校正                         | 日本語の文章編集      |
 | C-; j p/c/w     | 句読点の統一 / 文字数 / 空白表示        | 日本語の文章編集      |
 | C-; e p/o/h     | PDF出力 / PDF出力して開く / HTML出力    | Org → PDF 出力       |
@@ -335,6 +336,36 @@ Node の textlint で日本語を校正する。設定は =textlint/= 以下（.
     "l" "textlint（校正）"))
 (keymap-set tk-leader-ja-map "l" #'my/textlint)
 #+end_src
+
+** 定型文の展開 (yasnippet)
+よく書く型を短いキーワードから展開する。雛形は =snippets/= 以下（Git 管理）。
+#+begin_src elisp
+(use-package yasnippet
+  :ensure t
+  :hook ((org-mode text-mode prog-mode) . yas-minor-mode)
+  :custom
+  (yas-snippet-dirs (list (expand-file-name "snippets" user-emacs-directory)))
+  :config
+  ;; Org-mode の TAB（折りたたみ）と衝突させないため、TAB での展開は無効にする。
+  ;; 展開は C-; j t（一覧から選ぶ）か、キーワードを打って C-c C-y で行う。
+  (keymap-set yas-minor-mode-map "<tab>" nil)
+  (keymap-set yas-minor-mode-map "TAB" nil)
+  (keymap-set yas-minor-mode-map "C-c C-y" #'yas-expand)
+  (yas-reload-all))
+
+;; C-; j t : 雛形を一覧から選んで挿入（vertico で絞り込める）
+;; C-; j n : 新しい雛形を作る
+(keymap-set tk-leader-ja-map "t" #'yas-insert-snippet)
+(keymap-set tk-leader-ja-map "n" #'yas-new-snippet)
+#+end_src
+
+同梱の雛形（=snippets/org-mode/= と =snippets/text-mode/=）:
+- =today= : 今日の日付
+- =<py= : Python のコードブロック
+- =setsumei= : 患者説明文書の雛形（タイトル・目的・方法・注意点・費用・FAQ）
+
+新しい雛形は =C-; j n= で作り、=C-c C-c= で保存する。保存先を聞かれたら
+=snippets/org-mode/= を選ぶ。ファイルは Git で追跡されるので、他の環境にも持ち運べる。
 
 * 見た目
 ** フォント

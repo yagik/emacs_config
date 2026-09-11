@@ -1,0 +1,20 @@
+# -*- mode: snippet -*-
+# name: 患者説明文書の雛形
+# key: setsumei
+# --
+#+TITLE: ${1:検査・治療の名前}のご説明
+#+DATE: `(format-time-string "%Y-%m-%d")`
+#+OPTIONS: toc:nil
+
+* $1 とは
+$0
+
+* 目的と期待できること
+
+* 方法と流れ
+
+* 起こりうること・注意点
+
+* 費用の目安
+
+* よくあるご質問
