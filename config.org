@@ -1147,7 +1147,13 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 ;; Git連携 (Magit)
 (use-package magit
   :ensure t
-  :bind (("C-x g" . magit-status)))
+  :bind (("C-x g" . magit-status))
+  :custom
+  ;; 差分を語（文字）単位で強調する。文章の推敲では、行単位より
+  ;; 「どこが変わったか」が一目で分かる。M-x magit-diff-toggle-refine-hunk で一時的に切替可。
+  (magit-diff-refine-hunk 'all)
+  ;; コミットメッセージ編集時に差分を横に表示する（何を書いたか見ながら書ける）
+  (magit-commit-show-diff t))
 
 
 #+end_src
