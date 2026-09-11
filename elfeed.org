@@ -29,8 +29,15 @@
 
 * フィード :elfeed:
 ** 眼科 :ophthalmology:
+*** JAMA Ophthalmology :jama:
+# Most Read（よく読まれている記事）
+**** https://jamanetwork.com/rss/site_17/mostReadArticles.xml
 *** PubMed :pubmed:
 # ↓ ここに PubMed の RSS URL を「**** URL」の形で追加する
+
+** Emacs :emacs:
+# Sacha Chua の週刊 Emacs News（Emacs 界隈の週刊まとめ）
+*** https://sachachua.com/blog/category/emacs-news/feed/
 
 ** その他 :misc:
 # ↓ ここにその他のフィードを「*** URL」の形で追加する
