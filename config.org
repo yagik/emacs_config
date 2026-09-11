@@ -2,7 +2,8 @@
 #+AUTHOR: Toshi Kasuga
 #+STARTUP: content
 
-* init-base.el
+* 基本設定
+** 起動・文字コード・Mac
 #+begin_src elisp
 
   ;; -*- lexical-binding: t -*-
@@ -34,6 +35,10 @@
     ;; 外部プロセス（latexmk 等）からも TeX が見えるように PATH にも追加
     (setenv "PATH" (concat "/Library/TeX/texbin:" (getenv "PATH"))))
 
+#+end_src
+
+** パッケージ管理 (package.el / use-package)
+#+begin_src elisp
   ;;パッケージ管理 (標準 package.el)
   (require 'package)
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
@@ -47,6 +52,10 @@
     :ensure t
     :demand t)
 
+#+end_src
+
+** 画面・履歴・補完の基本
+#+begin_src elisp
   ;; UIのノイズをカット
   (setq inhibit-startup-message t)
   (tool-bar-mode -1)
@@ -70,6 +79,10 @@
   (setq read-file-name-completion-ignore-case t)
   (setq read-buffer-completion-ignore-case t)
 
+#+end_src
+
+** 行番号
+#+begin_src elisp
   ;; 行番号表示に関する設定
   (global-display-line-numbers-mode t)
   ;; 't (絶対行) 、'relative (相対行) 
@@ -89,6 +102,10 @@
     (add-hook hook (lambda () (display-line-numbers-mode -1))))
 
 
+#+end_src
+
+** 折り返し・バックアップ・スクロール
+#+begin_src elisp
   ;; 日本語の行折り返しを文字カテゴリ基準にする（禁則処理が自然になる）
   (setq word-wrap-by-category t)
 
@@ -109,7 +126,36 @@
   (setq scroll-margin 0)
   (setq maximum-scroll-margin 0.1) ; 画面全体の10%以上はマージンを作らない
 #+end_src
-* init-keybindings.el
+* キー操作
+** キー割り当て一覧（メモ）
+設定が各見出しに散らばっているので、主な割り当てをここに控えておく。
+新しく割り当てる前に、ここで衝突がないか確認する。
+
+| キー            | 機能                                  | 設定場所                |
+|-----------------+---------------------------------------+-------------------------|
+| C-;             | リーダーキー（下記サブメニュー）      | キー操作                |
+| C-; e p/o/h     | PDF出力 / PDF出力して開く / HTML出力  | Org → PDF 出力          |
+| C-; n n/u/r/G   | Elfeed 起動 / 更新 / 再読込 / 再取得  | ツール > RSS            |
+| C-c n n/f/s/g/m | Denote 作成 / 開く / 検索 / 全文 / 一覧 | Org > Denote            |
+| C-c l           | org-store-link                        | Org > olivetti          |
+| C-c d / C-c i   | 辞書（カーソル下 / 入力）             | ツール > 翻訳           |
+| C-c t           | 翻訳 (gt)                             | ツール > 翻訳           |
+| C-c g / C-c c   | gptel 送信 / メニュー                 | ツール > AI             |
+| C-x g           | Magit                                 | 開発 > Magit            |
+| C-s, s-f        | consult-line（migemo 対応）           | 操作・補完 > 補完       |
+| C-. / M-.       | embark-act / embark-dwim              | 操作・補完 > 補完       |
+| C-o             | ace-window                            | 操作・補完 > 編集補助   |
+| C-= / C--       | 選択範囲を広げる / 狭める             | 操作・補完 > 編集補助   |
+| M-i             | symbol-overlay                        | 開発 > その他           |
+| s-系            | Mac 風ショートカット（コピー・undo 等）| キー操作 / 編集補助     |
+
+標準の機能を上書きしているもの:
+- =M-.= : 本来は xref-find-definitions（定義へジャンプ）→ embark-dwim
+- =C-o= : 本来は open-line → ace-window
+- =C-s= : 本来は isearch → consult-line
+- =C-j= : SKK 用にアンバインド済み
+
+** リーダーキー (C-;)
 #+begin_src elisp
 (global-unset-key (kbd "C-j"))
 ;; AquqSKK用にC-jをアンバインドしてみる.
@@ -148,6 +194,10 @@
   (which-key-add-keymap-based-replacements global-map "C-;" "Leader"))
 
 
+#+end_src
+
+** Mac 風ショートカット・ウィンドウ移動
+#+begin_src elisp
 ;; Mac標準ショートカットと行操作
 (global-set-key (kbd "s-a") 'mark-whole-buffer)
 (global-set-key (kbd "s-v") 'yank)
@@ -166,15 +216,28 @@
 
 #+end_src
 
-* Font and theme
+* 見た目
+** フォント
 #+begin_src elisp
+;; フォント名と基本サイズはここで一元管理する（各所の設定はこの変数を参照）
+(defvar my/font-mono "PlemolJP"
+  "等幅フォント（コード・表・行番号・UI）。")
+(defvar my/font-prose "Hiragino Kaku Gothic Pro"
+  "文章用フォント（Org 本文・Elfeed のタイトル）。")
+(defvar my/font-height 170
+  "等幅フォントの基本サイズ（1/10 pt）。")
+
 ;;フォントと外見の基本設定
 (defun my/setup-fonts ()
   (interactive)
-  (when (member "PlemolJP" (font-family-list))
-    (set-face-attribute 'default nil :family "PlemolJP" :height 170)))
+  (when (member my/font-mono (font-family-list))
+    (set-face-attribute 'default nil :family my/font-mono :height my/font-height)))
 (my/setup-fonts)
 
+#+end_src
+
+** テーマ
+#+begin_src elisp
 ;; テーマ設定
 (use-package catppuccin-theme
   :ensure t
@@ -183,6 +246,10 @@
   (setq catppuccin-accent 'blue)
   (load-theme 'catppuccin t))
 
+#+end_src
+
+** Org 見出しの色
+#+begin_src elisp
 ;; Org Headline colors (Spacemacs Dark-ish)
 (defun my/org-headline-colors-spacemacs-dark ()
   "Set Org headline colors only (Spacemacs Dark-ish)."
@@ -210,7 +277,37 @@
 
 #+end_src
 
-* init-ui.el
+** モードライン (doom-modeline)
+#+begin_src elisp
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1)
+  :custom
+  ;; --- 表示のカスタマイズ ---
+  (doom-modeline-height 25)      ; モードラインの高さ
+  (doom-modeline-bar-width 4)    ; 左端のバーの太さ
+  (doom-modeline-buffer-file-name-style 'truncate-with-project) ; パスの表示形式
+;; 'truncate-with-project  がもともと
+;; 'buffer-name でバッファー名だけ
+  
+  ;; --- アイコンの設定 ---
+  (doom-modeline-icon t)         ; アイコンを表示する
+  (doom-modeline-major-mode-icon t)
+  
+  ;; --- 追加情報の表示（Toshiさんのリクエスト関連） ---
+  (doom-modeline-word-count t)   ; ★文字数/単語数を表示
+  (doom-modeline-buffer-encoding t) ; 改行コードなどを表示
+  (doom-modeline-indent-info t)  ; インデント幅を表示
+  (doom-modeline-checkers t)     ; Flymakeなどのエラー数を表示
+  
+  ;; --- 外見の微調整 ---
+  (doom-modeline-theme 'catppuccin)) ; または 'catppuccin' など
+;; doom-atomがデフォルト
+
+#+end_src
+
+* 操作・補完
+** カーソル・which-key
 #+begin_src emacs-lisp
 
 ;;馴染みのIビームにする。
@@ -225,6 +322,10 @@
   ;; ミニバッファの横に余裕を持って表示
   (setq which-key-side-window-location 'bottom))
 
+#+end_src
+
+** ミニバッファ補完 (vertico / orderless / consult / embark)
+#+begin_src emacs-lisp
 ;; モダンUI & 補完 (Vertico, Consult, Embark)
 (use-package vertico
   :init
@@ -262,6 +363,10 @@
 
 
 
+#+end_src
+
+** タブ・ダッシュボード
+#+begin_src emacs-lisp
 ;; ダッシュボード & タブ
 (use-package tab-bar
   :ensure nil
@@ -284,6 +389,10 @@
 
 (use-package nerd-icons :ensure t)
 
+#+end_src
+
+** 日本語検索 (migemo)
+#+begin_src emacs-lisp
 ;; 日本語検索 (Migemo)
 (use-package migemo
   :if (executable-find "cmigemo")
@@ -311,6 +420,10 @@
                  '(consult-location (styles my/orderless-migemo-style)))))
 
 
+#+end_src
+
+** 編集補助 (undo・ウィンドウ・選択範囲)
+#+begin_src emacs-lisp
 (use-package undo-fu
   :ensure t
   :bind (("s-z" . undo-fu-only-undo)
@@ -319,7 +432,7 @@
 (use-package vundo
   :ensure t
   :bind ("s-u" . vundo)
-  :config (set-face-attribute 'vundo-default nil :family "PlemolJP"))
+  :config (set-face-attribute 'vundo-default nil :family my/font-mono))
 
 (use-package ace-window
   :ensure t
@@ -349,6 +462,10 @@
          ("s-E" . er/contract-region))) ; 狭める方は Command + Shift + e
 
 
+#+end_src
+
+** 日本語入力の自動切替 (sis)
+#+begin_src emacs-lisp
 ;; -----------------------------------------------------------------------------
 ;; Google日本語(日：青) + Mac標準ABC(英：橙) の自動切替
 ;; -----------------------------------------------------------------------------
@@ -371,6 +488,10 @@
   (sis-global-cursor-color-mode t))
 
 
+#+end_src
+
+** ポップアップ・カーソル強調
+#+begin_src emacs-lisp
 (use-package posframe
   :ensure t
   :demand t)
@@ -383,42 +504,15 @@
 ;; Diredモードの時はbeacon（光るエフェクト）をオフにする
 (add-hook 'dired-mode-hook (lambda () (beacon-mode -1)))
 #+end_src
-* mode-line
-#+begin_src elisp
-(use-package doom-modeline
-  :ensure t
-  :init (doom-modeline-mode 1)
-  :custom
-  ;; --- 表示のカスタマイズ ---
-  (doom-modeline-height 25)      ; モードラインの高さ
-  (doom-modeline-bar-width 4)    ; 左端のバーの太さ
-  (doom-modeline-buffer-file-name-style 'truncate-with-project) ; パスの表示形式
-;; 'truncate-with-project  がもともと
-;; 'buffer-name でバッファー名だけ
-  
-  ;; --- アイコンの設定 ---
-  (doom-modeline-icon t)         ; アイコンを表示する
-  (doom-modeline-major-mode-icon t)
-  
-  ;; --- 追加情報の表示（Toshiさんのリクエスト関連） ---
-  (doom-modeline-word-count t)   ; ★文字数/単語数を表示
-  (doom-modeline-buffer-encoding t) ; 改行コードなどを表示
-  (doom-modeline-indent-info t)  ; インデント幅を表示
-  (doom-modeline-checkers t)     ; Flymakeなどのエラー数を表示
-  
-  ;; --- 外見の微調整 ---
-  (doom-modeline-theme 'catppuccin)) ; または 'catppuccin' など
-;; doom-atomがデフォルト
 
-#+end_src
-
-* init-org.el
+* Org
+** 表示設定
 #+begin_src elisp
 ;; Org-mode 外見設定関数（バッファローカル寄り）
 (defun my/org-mode-visual-settings ()
   "Org-mode の本文を可変幅、表やコードを見やすくする。"
-  (face-remap-add-relative 'default :family "Hiragino Kaku Gothic Pro" :height 180)
-  (face-remap-add-relative 'line-number :family "PlemolJP" :height 160)
+  (face-remap-add-relative 'default :family my/font-prose :height 180)
+  (face-remap-add-relative 'line-number :family my/font-mono :height 160)
   (setq-local line-spacing 0.1))
 
 ;; Org-mode 本体
@@ -438,21 +532,25 @@
 ;; Org の face はロード後に一度だけまとめて設定
 (with-eval-after-load 'org
   (set-face-attribute 'org-table nil
-                      :family "PlemolJP"
-                      :height 170
+                      :family my/font-mono
+                      :height my/font-height
                       :foreground "#2aa198")
   (set-face-attribute 'org-block nil
-                      :family "PlemolJP"
-                      :height 170
+                      :family my/font-mono
+                      :height my/font-height
                       :foreground 'unspecified)
   (set-face-attribute 'org-code nil
-                      :family "PlemolJP"
-                      :height 170)
+                      :family my/font-mono
+                      :height my/font-height)
   (set-face-attribute 'org-verbatim nil
-                      :family "PlemolJP"
-                      :height 170))
+                      :family my/font-mono
+                      :height my/font-height))
 
 
+#+end_src
+
+** olivetti（本文幅）・リンク保存
+#+begin_src elisp
 (use-package olivetti
   :hook (org-mode . olivetti-mode)
   :custom (olivetti-body-width 90))
@@ -460,6 +558,10 @@
 
 (global-set-key (kbd "C-c l") 'org-store-link)
 
+#+end_src
+
+** PDF 表示 (pdf-tools)
+#+begin_src elisp
 ;; PDF Tools 設定
 (use-package pdf-tools
   :ensure t
@@ -479,6 +581,10 @@
   (add-hook 'pdf-view-mode-hook (lambda () (line-number-mode -1))))
 
 
+#+end_src
+
+** ウィンドウの開き方 (display-buffer-alist)
+#+begin_src elisp
 ;; 1. Org-mode側のルールを矯正する
 ;;    デフォルトだと「ファイルリンクは別窓で開く」設定になっているため、
 ;;    これを「find-file (現在の窓で開く)」に強制変更します。
@@ -514,6 +620,10 @@
 
 
 
+#+end_src
+
+** 画像・ファイルのドラッグ＆ドロップ (org-download)
+#+begin_src elisp
 ;;; ================================================================
 ;;; Org-download & DND: 画像は自動、その他はメニュー選択
 ;;; ================================================================
@@ -597,6 +707,10 @@
 ;;--------Org-download ends here---
 
 
+#+end_src
+
+** 装飾 (org-modern / org-appear / org-superstar)
+#+begin_src elisp
 (use-package org-modern
   :hook (org-mode . org-modern-mode)
   :custom (org-modern-star nil)
@@ -627,6 +741,10 @@
   ;; 箇条書きの点も変えたい場合（不要ならこの行は消してOK）
   (org-superstar-item-bullet-alist '((?+ . ?•) (?- . ?•) (?* . ?•))))
 
+#+end_src
+
+** Denote・ノート検索
+#+begin_src elisp
 (use-package denote
   :hook (dired-mode . denote-dired-mode)
   :custom 
@@ -668,6 +786,10 @@
   :after denote
   :bind ("C-c n m" . list-denotes))
 
+#+end_src
+
+** Babel（コード実行）
+#+begin_src elisp
 ;; org-babelで使える言語の設定
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -677,6 +799,10 @@
 ;; 使用するPythonを明示（任意だが確実）
 (setq org-babel-python-command "python3")
 
+#+end_src
+
+** EPUB / DjVu ビューア・表示の保留事項
+#+begin_src elisp
 ;; EPUB閲覧用（警告消去のため）
 (use-package nov :ensure t)
 ;; DjVu閲覧用（警告消去のため）
@@ -691,8 +817,8 @@
 ;;   :hook (org-mode . valign-mode))
 #+end_src
 
-* org-export.el
-PDF出力をなんとか。
+* Org → PDF 出力
+** LaTeX 設定
 #+begin_src elisp
 ;; --------------------------------------------------
 ;; Org → PDF export 設定
@@ -803,6 +929,10 @@ PDF出力をなんとか。
   pdflang={%L}}\n")
   )
 
+#+end_src
+
+** 出力コマンドとキー割り当て
+#+begin_src elisp
 ;; -------------------------------------------------------------------
 ;; 8. 出力ヘルパー関数
 ;;    PDFを生成して、できあがったファイルを自動で開く
@@ -841,246 +971,8 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 (setq org-export-with-toc nil)
 #+end_src
 
-* vba-mode
-#+begin_src elisp
-(require 'prog-mode)
-
-;; -------------------------------------------------------------------------
-;; 1. Customization
-;; -------------------------------------------------------------------------
-
-(defgroup vba-mode nil
-  "Major mode for editing Visual Basic for Applications."
-  :group 'languages)
-
-(defcustom vba-mode-indent-offset 4
-  "Indentation amount per level."
-  :type 'integer
-  :safe #'integerp
-  :group 'vba-mode)
-
-(defcustom vba-mode-continuation-offset 4
-  "Extra indentation for line continuations (lines ending in _).
-Set to 0 to align with the previous line."
-  :type 'integer
-  :safe #'integerp
-  :group 'vba-mode)
-
-(defcustom vba-mode-indent-case-extra-offset 0
-  "Indentation of `Case` lines relative to the `Select Case` line.
-- 0: align `Case` with `Select Case` (Standard)
-- 4: indent `Case` lines one level deeper than `Select Case`"
-  :type 'integer
-  :safe #'integerp
-  :group 'vba-mode)
-
-;; -------------------------------------------------------------------------
-;; 2. Syntax & Highlights
-;; -------------------------------------------------------------------------
-
-(defvar vba-mode-syntax-table
-  (let ((st (make-syntax-table)))
-    (modify-syntax-entry ?' "<" st)   ; Comment start
-    (modify-syntax-entry ?\n ">" st)  ; Comment end
-    (modify-syntax-entry ?\" "\"" st) ; String
-    (modify-syntax-entry ?_ "w" st)   ; Symbol constituent
-    (modify-syntax-entry ?: "." st)   ; Punctuation separator
-    st)
-  "Syntax table for `vba-mode'.")
-
-(defconst vba-mode-keywords
-  (regexp-opt '("Option" "Explicit" "Sub" "Function" "Property" "End"
-                "If" "Then" "Else" "ElseIf" "Select" "Case" "Default"
-                "For" "Each" "Next" "Do" "Loop" "While" "Wend" "Until"
-                "With" "Exit" "GoTo" "On" "Error" "Resume"
-                "Dim" "ReDim" "Preserve" "Public" "Private" "Static" "Friend"
-                "As" "Set" "New" "Call" "Let" "Get"
-                "ByVal" "ByRef" "Optional" "ParamArray"
-                "And" "Or" "Not" "Xor" "Mod" "Is" "Like" "Imp" "Eqv") 'symbols))
-
-(defconst vba-mode-types
-  (regexp-opt '("Boolean" "Byte" "Integer" "Long" "LongLong" "Single" "Double"
-                "Currency" "String" "Date" "Variant" "Object" "Collection") 'symbols))
-
-;; Minimized Built-ins to reduce false positives (Removed 'Events')
-(defconst vba-mode-builtins
-  (regexp-opt '("Application" "Debug" "Err" "VBA" "Me") 'symbols))
-
-(defconst vba-mode-constants
-  (regexp-opt '("True" "False" "Nothing" "Empty" "Null" "vbCr" "vbLf" "vbCrLf"
-                "vbNullString" "vbTab" "vbOK" "vbCancel" "vbYes" "vbNo") 'symbols))
-
-(defvar vba-mode-font-lock-keywords
-  `((,vba-mode-keywords . font-lock-keyword-face)
-    (,vba-mode-types . font-lock-type-face)
-    (,vba-mode-builtins . font-lock-builtin-face)
-    (,vba-mode-constants . font-lock-constant-face)
-    ;; Rem comments (Must be followed by space or EOL)
-    ("^[ \t]*\\(Rem\\b\\(?:[ \t].*\\)?\\)$" 1 font-lock-comment-face)
-    ;; Function names
-    ("\\_<\\(?:Sub\\|Function\\|Property\\)\\_>[ \t]+\\([A-Za-z0-9_]+\\)"
-     1 font-lock-function-name-face)
-    ;; Variable declarations
-    ("\\_<\\(?:Dim\\|Const\\|Public\\|Private\\)\\_>[ \t]+\\([A-Za-z0-9_]+\\)"
-     1 font-lock-variable-name-face)
-    ;; Labels
-    ("^[ \t]*\\([A-Za-z0-9_]+\\):" 1 font-lock-constant-face)))
-
-;; -------------------------------------------------------------------------
-;; 3. Indentation Helpers (Predicates)
-;; -------------------------------------------------------------------------
-
-(defun vba-mode--prev-meaningful-line ()
-  "Return the point at the beginning of the previous non-blank/non-comment line."
-  (save-excursion
-    (let ((found nil))
-      (while (and (not found) (zerop (forward-line -1)))
-        (unless (looking-at-p "^[ \t]*\\(?:'.*\\)?$")
-          (setq found (point))))
-      found)))
-
-(defun vba-mode--line-str-at (pt)
-  (save-excursion
-    (goto-char pt)
-    (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
-
-(defun vba-mode--curr-line-str ()
-  (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
-
-(defun vba-mode--select-case-p (s)
-  (string-match-p "^[ \t]*Select\\s-+Case\\b" s))
-
-(defun vba-mode--case-line-p (s)
-  (string-match-p "^[ \t]*Case\\b" s))
-
-(defun vba-mode--if-block-opener-p (s)
-  ;; Matches "If ... Then" ONLY if Then is at EOL or followed by comment
-  (string-match-p "If\\b.*\\bThen\\s-*\\(?:'\\|$\\)" s))
-
-(defun vba-mode--continuation-p (s)
-  (string-match-p ".*_[ \t]*\\(?:'.*\\)?$" s))
-
-(defun vba-mode--other-opener-p (s)
-  ;; Note: 'Case' is purposely excluded here. It is handled in Step 4.
-  (string-match-p
-   (concat "^[ \t]*\\(?:"
-           "For\\b"
-           "\\|Do\\b"
-           "\\|With\\b"
-           "\\|While\\b"
-           "\\|Sub\\b"
-           "\\|Function\\b"
-           "\\|Property\\b"
-           "\\|Type\\b"
-           "\\|Enum\\b"
-           "\\|Else\\b"
-           "\\|ElseIf\\b"
-           "\\)")
-   s))
-
-(defun vba-mode--closer-p (s)
-  (string-match-p
-   (concat "^[ \t]*\\(?:"
-           "End\\s-+\\(?:If\\|Sub\\|Function\\|Property\\|Select\\|With\\|Type\\|Enum\\)\\b"
-           "\\|Next\\b"
-           "\\|Loop\\b"
-           "\\|Wend\\b"
-           "\\|Else\\b"
-           "\\|ElseIf\\b"
-           "\\)")
-   s))
-
-;; -------------------------------------------------------------------------
-;; 4. Indentation Logic (Robust 4-Step Process)
-;; -------------------------------------------------------------------------
-
-(defun vba-mode--calc-indent ()
-  "Calculate indentation level using a 4-step state machine."
-  (let ((indent 0)
-        (prev-point (vba-mode--prev-meaningful-line))
-        (case-fold-search t))
-
-    (if (not prev-point)
-        0
-      (let* ((prev-str (vba-mode--line-str-at prev-point))
-             (prev-indent (save-excursion (goto-char prev-point) (current-indentation)))
-             (curr-str (vba-mode--curr-line-str)))
-
-        ;; Base: previous meaningful line indentation
-        (setq indent prev-indent)
-
-        ;; --- Step 1: Continuation from previous line ---
-        (when (vba-mode--continuation-p prev-str)
-          (setq indent (+ indent vba-mode-continuation-offset)))
-
-        ;; --- Step 2: Opener effects (Block start) ---
-        (cond
-         ((vba-mode--if-block-opener-p prev-str)
-          (setq indent (+ indent vba-mode-indent-offset)))
-         ((vba-mode--select-case-p prev-str)
-          (setq indent (+ indent vba-mode-indent-offset)))
-         ((vba-mode--other-opener-p prev-str)
-          (setq indent (+ indent vba-mode-indent-offset))))
-
-        ;; --- Step 3: Current line adjustments (Dedent/Alignment) ---
-        (cond
-         ;; Case line: Align relative to Select Case (or prev level)
-         ((vba-mode--case-line-p curr-str)
-          (if (vba-mode--select-case-p prev-str)
-              ;; If following Select Case directly -> Align + extra offset
-              (setq indent (+ prev-indent vba-mode-indent-case-extra-offset))
-            ;; Otherwise -> Dedent 1 level (undoing Case Content indent) + extra offset
-            (setq indent (+ (max 0 (- indent vba-mode-indent-offset))
-                            vba-mode-indent-case-extra-offset))))
-
-         ;; Standard Closer: Dedent 1 level
-         ((vba-mode--closer-p curr-str)
-          (setq indent (max 0 (- indent vba-mode-indent-offset)))))
-
-        ;; --- Step 4: Case Content Indentation ---
-        ;; If prev was Case, and current is NOT Case (content), add indent.
-        ;; We trust prev-indent here (standard Emacs practice).
-        ;; If prev line was indented correctly, (prev-indent + offset) is correct.
-        (when (and (vba-mode--case-line-p prev-str)
-                   (not (vba-mode--case-line-p curr-str)))
-          (setq indent (+ prev-indent vba-mode-indent-offset)))
-
-        (max 0 indent)))))
-
-(defun vba-mode-indent-line ()
-  (interactive)
-  (let ((indent (vba-mode--calc-indent))
-        (pos (- (point-max) (point))))
-    (indent-line-to indent)
-    (if (> (- (point-max) pos) (point))
-        (goto-char (- (point-max) pos)))))
-
-;; -------------------------------------------------------------------------
-;; 5. Mode Definition & Autoloads
-;; -------------------------------------------------------------------------
-
-;;;###autoload
-(define-derived-mode vba-mode prog-mode "VBA"
-  "Major mode for editing Excel VBA."
-  :syntax-table vba-mode-syntax-table
-  (setq-local font-lock-defaults '(vba-mode-font-lock-keywords nil t))
-  (setq-local indent-line-function #'vba-mode-indent-line)
-  (setq-local comment-start "' ")
-  (setq-local comment-start-skip "'+\\s-*")
-  (setq-local outline-regexp "^[ \t]*\\(Sub\\|Function\\|Property\\|Enum\\|Type\\)")
-  (setq-local case-fold-search t))
-
-;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.\\(?:bas\\|cls\\|frm\\|vbs\\)\\'" . vba-mode))
-
-(with-eval-after-load 'org
-  ;; Support both lowercase and uppercase (VBA) for convenience
-  (dolist (lang '("vba" "VBA" "vbs"))
-    (add-to-list 'org-src-lang-modes (cons lang 'vba))))
-(provide 'vba-mode)
-#+end_src
-
-* init-dev.el
+* 開発
+** カッコの補助
 #+begin_src elisp
 
 ;; カッコの閉じ忘れ・視認性対策
@@ -1096,12 +988,20 @@ Set to 0 to align with the previous line."
   :hook (prog-mode . rainbow-delimiters-mode))
 
 
+#+end_src
+
+** Magit
+#+begin_src elisp
 ;; Git連携 (Magit)
 (use-package magit
   :ensure t
   :bind (("C-x g" . magit-status)))
 
 
+#+end_src
+
+** 入力補完 (corfu)
+#+begin_src elisp
 ;; 洗練された補完 UI (Corfu)
 (use-package corfu
   :ensure t
@@ -1116,6 +1016,10 @@ Set to 0 to align with the previous line."
   (org-mode . (lambda ()        ; Org-modeではOff
                 (setq-local corfu-auto nil))))
 
+#+end_src
+
+** 構文チェック・LSP (flymake / eglot)
+#+begin_src elisp
 ;; 構文チェックの標準化 (Flymake)
 ;; Emacs標準の機能を使って、コードの書き間違いを警告します
 (add-hook 'prog-mode-hook 'flymake-mode)
@@ -1135,11 +1039,17 @@ Set to 0 to align with the previous line."
   :config
   (keymap-set eglot-mode-map "s-." 'eglot-code-actions))
 
+#+end_src
+
+** その他（symbol-overlay・VBA・YAML）
+#+begin_src elisp
 ;; 変数のハイライト
 (use-package symbol-overlay
   :ensure t
   :bind ("M-i" . symbol-overlay-put))
 
+;; 自作 VBA モード（本体は lisp/vba-mode.el）
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (require 'vba-mode)
 
 
@@ -1150,7 +1060,7 @@ Set to 0 to align with the previous line."
 
 #+end_src
 
-* 各種言語サポート
+** Markdown
 #+begin_src elisp
 ;; --- Markdown ---
 (use-package markdown-mode
@@ -1176,7 +1086,7 @@ Set to 0 to align with the previous line."
   :bind (:map markdown-mode-command-map
               ("g" . grip-mode)))
 #+end_src
-* ESS関係
+** R (ESS)
 #+begin_src elisp
 
 (use-package ess
@@ -1188,7 +1098,8 @@ Set to 0 to align with the previous line."
   (setq ess-ask-for-project-root nil))
 
 #+end_src
-* Elfeed/RSS関係
+* ツール
+** RSS (Elfeed)
 #+begin_src elisp
 ;; -------------------------------------------------------------------
 ;; Elfeed: Emacs RSS/Atom Reader
@@ -1206,8 +1117,8 @@ Set to 0 to align with the previous line."
   (elfeed-search-filter "@2-week-ago +unread")
   :config
   ;; 日本語の記事タイトルが化けないように
-  (set-face-attribute 'elfeed-search-title-face nil :family "Hiragino Kaku Gothic Pro")
-  (set-face-attribute 'elfeed-search-unread-title-face nil :family "Hiragino Kaku Gothic Pro" :weight 'bold))
+  (set-face-attribute 'elfeed-search-title-face nil :family my/font-prose)
+  (set-face-attribute 'elfeed-search-unread-title-face nil :family my/font-prose :weight 'bold))
 
 ;; -------------------------------------------------------------------
 ;; elfeed-org: フィードをOrg-modeファイルで管理
@@ -1238,9 +1149,7 @@ Set to 0 to align with the previous line."
 
 #+end_src
 
-
-
-* 翻訳関係
+** 翻訳
 #+begin_src emacs-lisp
 ;; --- osx-dictionary (単語検索用) ---
 (use-package osx-dictionary
@@ -1287,7 +1196,7 @@ Set to 0 to align with the previous line."
 
 #+end_src
 
-* AI関係
+** AI (gptel)
 #+begin_src emacs-lisp
 ;; 1. .env ファイルを読み込んで環境変数を設定
 (let ((env-file (expand-file-name ".env" user-emacs-directory)))
@@ -1310,7 +1219,7 @@ Set to 0 to align with the previous line."
   ;; 使えるモデルは C-c c (gptel-menu) で確認・切替できる。
   (setq gptel-model 'gemini-3.7-flash))
 #+end_src
-* 論文管理関係
+** 論文管理 (citar)
 #+begin_src emacs-lisp
 (use-package citar
   :ensure t

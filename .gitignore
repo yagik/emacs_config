@@ -10,3 +10,7 @@
 !/init.el
 # Customize の保存先。package-selected-packages を新環境での復元に使う
 !/custom.el
+# 自作ライブラリ（lisp/ のうち vba-mode.el だけ追跡）
+!/lisp/
+/lisp/*
+!/lisp/vba-mode.el
