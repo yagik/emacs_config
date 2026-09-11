@@ -1,0 +1,12 @@
+# ホワイトリスト方式: まず全部を除外し、追跡したいファイルだけ ! で許可する
+# （.env の API キーや elpa/、履歴ファイルなどが誤ってコミットされるのを防ぐ）
+/*
+
+# --- 追跡するファイル ---
+!/.gitignore
+# 設定本体（literate config）
+!/config.org
+# config.org を読み込む起動の入口
+!/init.el
+# Customize の保存先。package-selected-packages を新環境での復元に使う
+!/custom.el
