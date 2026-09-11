@@ -681,11 +681,11 @@ PDF出力をなんとか。
 
   ;; -----------------------------------------------------------------
   ;; 1. 日本語用クラスの設定 (bxjsarticle)
-  ;;    [ja=luatex] と明示するのが LuaLaTeX では安定
+  ;;    ja=standard + lualatex オプションで LuaLaTeX 用の和文設定になる
   ;; -----------------------------------------------------------------
   (add-to-list 'org-latex-classes
                '("bxjsarticle"
-                 "\\documentclass[ja=standard,lualatex,12pt,report]{bxjsarticle}
+                 "\\documentclass[ja=standard,lualatex,12pt]{bxjsarticle}
                   [DEFAULT-PACKAGES]
                   [PACKAGES]
                   [EXTRA]"
@@ -732,7 +732,7 @@ PDF出力をなんとか。
   ;;    下の「minted版」のコメントアウトを外してください。
   ;; -----------------------------------------------------------------
   (add-to-list 'org-latex-packages-alist '("" "listings" t))
-  (setq org-latex-listings t)
+  (setq org-latex-src-block-backend 'listings) ; 旧名 org-latex-listings (Org 9.6で改名)
   (setq org-latex-listings-options
         '(("basicstyle"       "\\ttfamily\\footnotesize")
           ("keywordstyle"     "\\color{blue}\\bfseries")
@@ -751,7 +751,7 @@ PDF出力をなんとか。
   ;;     注意: brew install pygments が必要
   ;; -----------------------------------------------------------------
   ;; (add-to-list 'org-latex-packages-alist '("" "minted" t))
-  ;; (setq org-latex-listings 'minted)
+  ;; (setq org-latex-src-block-backend 'minted)
   ;; (setq org-latex-minted-options
   ;;       '(("frame"     "lines")
   ;;         ("fontsize"  "\\footnotesize")
@@ -766,21 +766,20 @@ PDF出力をなんとか。
   (setq org-latex-image-default-width "0.9\\linewidth")
 
   ;; -----------------------------------------------------------------
-  ;; 7. ハイパーリンクの色設定（hidelinksより細かく制御したい場合）
-  ;;    現状はhidelinksで枠線を消す方針。色をつけたい場合は↓を有効化。
+  ;; 7. ハイパーリンクの見た目
+  ;;    hidelinks でリンクの赤枠を消す。PDFのメタ情報(作者・題名等)も設定。
+  ;;    色付きリンクにしたい場合は hidelinks を
+  ;;    colorlinks=true,linkcolor=black,urlcolor=blue などに置き換える。
   ;; -----------------------------------------------------------------
-  ;; (setq org-latex-hyperref-template
-  ;;       "\\hypersetup{
-  ;;          colorlinks=true,
-  ;;          linkcolor=black,
-  ;;          citecolor=blue,
-  ;;          urlcolor=blue,
-  ;;          pdfauthor={%a},
-  ;;          pdftitle={%t},
-  ;;          pdfkeywords={%k},
-  ;;          pdfsubject={%d},
-  ;;          pdfcreator={%c},
-  ;;          pdflang={%L}}\n")
+  (setq org-latex-hyperref-template
+        "\\hypersetup{
+  hidelinks,
+  pdfauthor={%a},
+  pdftitle={%t},
+  pdfkeywords={%k},
+  pdfsubject={%d},
+  pdfcreator={%c},
+  pdflang={%L}}\n")
   )
 
 ;; -------------------------------------------------------------------
@@ -804,17 +803,18 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 ;;    C-; e o : Export to PDF & Open
 ;;    C-; e h : Export to HTML
 ;; -------------------------------------------------------------------
-(with-eval-after-load 'ox
-  (defvar-keymap tk-leader-export-map
-    :doc "Org export sub-menu"
-    "p" #'org-latex-export-to-pdf
-    "o" #'my/org-export-pdf-and-open
-    "h" #'org-html-export-to-html)
-  (keymap-set tk-leader-map "e" tk-leader-export-map)
+;;    export 関数は autoload されるので ox の読み込みを待たずに登録できる
+;;    （以前は with-eval-after-load 'ox の中にあり、起動直後は効かなかった）
+(defvar-keymap tk-leader-export-map
+  :doc "Org export sub-menu"
+  "p" #'org-latex-export-to-pdf
+  "o" #'my/org-export-pdf-and-open
+  "h" #'org-html-export-to-html)
+(keymap-set tk-leader-map "e" tk-leader-export-map)
 
-  (with-eval-after-load 'which-key
-    (which-key-add-keymap-based-replacements tk-leader-map
-      "e" "Export")))
+(with-eval-after-load 'which-key
+  (which-key-add-keymap-based-replacements tk-leader-map
+    "e" "Export"))
 
 ;; デフォルトで目次を入れない(必要なら #+OPTIONS: toc:t で個別に有効化)
 (setq org-export-with-toc nil)
