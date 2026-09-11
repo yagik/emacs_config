@@ -119,76 +119,6 @@
   (setq scroll-margin 0)
   (setq maximum-scroll-margin 0.1) ; 画面全体の10%以上はマージンを作らない
 #+end_src
-** 日本語の文章編集
-日本語で文章を書くときに効く、標準機能だけの設定。
-#+begin_src elisp
-;; --- 1. 文単位の移動を日本語に対応させる ---
-;;     標準では「。」を文末と認識しないため M-a / M-e が効かない。
-;;     句点・感嘆符・疑問符（全角/半角）を文末として扱う。
-(setq sentence-end
-      "\\([。．？！]\\|[.?!][]\"')}]*\\($\\|[ \t]\\)\\)[ \t\n]*")
-(setq sentence-end-double-space nil)
-
-;; --- 2. 全角スペースとタブ、行末の空白を見えるようにする ---
-;;     半角スペースは対象外（whitespace-space-regexp で全角だけに限定）
-(use-package whitespace
-  :ensure nil
-  :hook ((org-mode text-mode markdown-mode) . whitespace-mode)
-  :custom
-  (whitespace-style '(face spaces space-mark tabs tab-mark trailing))
-  (whitespace-space-regexp "\\(\u3000+\\)")   ; 全角スペースのみ
-  (whitespace-display-mappings '((space-mark ?\u3000 [?\u25a1])   ; 全角スペース → □
-                                 (tab-mark   ?\t     [?\u00bb ?\t]))) ; タブ → »
-  :config
-  (set-face-attribute 'whitespace-space nil
-                      :background 'unspecified :foreground "#6c7086")
-  (set-face-attribute 'whitespace-tab nil
-                      :background 'unspecified :foreground "#6c7086"))
-
-;; --- 3. 句読点の統一 ---
-(defun my/japanese-punctuation (style &optional beg end)
-  "句読点を STYLE に統一する。STYLE は 'kuten（、。）または 'comma（，．）。
-リージョンがあればその範囲、なければバッファ全体が対象。"
-  (interactive
-   (list (intern (completing-read "句読点: " '("kuten" "comma") nil t))
-         (if (use-region-p) (region-beginning) (point-min))
-         (if (use-region-p) (region-end) (point-max))))
-  (let ((pairs (if (eq style 'kuten)
-                   '(("，" . "、") ("．" . "。"))
-                 '(("、" . "，") ("。" . "．"))))
-        (count 0))
-    (save-excursion
-      (dolist (pair pairs)
-        (goto-char (or beg (point-min)))
-        (while (search-forward (car pair) end t)
-          (replace-match (cdr pair) t t)
-          (setq count (1+ count)))))
-    (message "句読点を %d 箇所置換しました。" count)))
-
-;; --- 4. 文字数を数える（リージョンがなければバッファ全体） ---
-(defun my/count-characters ()
-  "文字数・行数を表示する。リージョンがあればその範囲。"
-  (interactive)
-  (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
-         (end (if (use-region-p) (region-end) (point-max))))
-    (message "%d 文字 / %d 行%s"
-             (- end beg)
-             (count-lines beg end)
-             (if (use-region-p) "（選択範囲）" "（バッファ全体）"))))
-
-;; --- 5. リーダーキー C-; j （Japanese/文章）に登録 ---
-(defvar-keymap tk-leader-ja-map
-  :doc "日本語の文章編集"
-  "p" #'my/japanese-punctuation   ; [p]unctuation: 句読点の統一
-  "c" #'my/count-characters       ; [c]ount: 文字数
-  "w" #'whitespace-mode)          ; [w]hitespace: 空白の表示切替
-(keymap-set tk-leader-map "j" tk-leader-ja-map)
-
-(with-eval-after-load 'which-key
-  (which-key-add-keymap-based-replacements tk-leader-map
-    "j" "日本語・文章"))
-#+end_src
-
 * キー操作
 ** キー割り当て一覧（メモ）
 設定が各見出しに散らばっているので、主な割り当てをここに控えておく。
@@ -197,7 +127,7 @@
 | キー            | 機能                                    | 設定場所              |
 |-----------------+-----------------------------------------+-----------------------|
 | C-;             | リーダーキー（下記サブメニュー）        | キー操作              |
-| C-; j p/c/w     | 句読点の統一 / 文字数 / 空白表示        | 基本設定 > 日本語     |
+| C-; j p/c/w     | 句読点の統一 / 文字数 / 空白表示        | 日本語の文章編集      |
 | C-; e p/o/h     | PDF出力 / PDF出力して開く / HTML出力    | Org → PDF 出力       |
 | C-; n n/u/r/G   | Elfeed 起動 / 更新 / 再読込 / 再取得    | ツール > RSS          |
 | C-c n n/f/s/g/m | Denote 作成 / 開く / 検索 / 全文 / 一覧 | Org > Denote          |
@@ -276,6 +206,76 @@
 (define-key global-map (kbd "s-<up>")    'windmove-up)
 (define-key global-map (kbd "s-<down>")  'windmove-down)
 
+#+end_src
+
+* 日本語の文章編集
+日本語で文章を書くときに効く、標準機能だけの設定。
+#+begin_src elisp
+;; --- 1. 文単位の移動を日本語に対応させる ---
+;;     標準では「。」を文末と認識しないため M-a / M-e が効かない。
+;;     句点・感嘆符・疑問符（全角/半角）を文末として扱う。
+(setq sentence-end
+      "\\([。．？！]\\|[.?!][]\"')}]*\\($\\|[ \t]\\)\\)[ \t\n]*")
+(setq sentence-end-double-space nil)
+
+;; --- 2. 全角スペースとタブ、行末の空白を見えるようにする ---
+;;     半角スペースは対象外（whitespace-space-regexp で全角だけに限定）
+(use-package whitespace
+  :ensure nil
+  :hook ((org-mode text-mode markdown-mode) . whitespace-mode)
+  :custom
+  (whitespace-style '(face spaces space-mark tabs tab-mark trailing))
+  (whitespace-space-regexp "\\(\u3000+\\)")   ; 全角スペースのみ
+  (whitespace-display-mappings '((space-mark ?\u3000 [?\u25a1])   ; 全角スペース → □
+                                 (tab-mark   ?\t     [?\u00bb ?\t]))) ; タブ → »
+  :config
+  (set-face-attribute 'whitespace-space nil
+                      :background 'unspecified :foreground "#6c7086")
+  (set-face-attribute 'whitespace-tab nil
+                      :background 'unspecified :foreground "#6c7086"))
+
+;; --- 3. 句読点の統一 ---
+(defun my/japanese-punctuation (style &optional beg end)
+  "句読点を STYLE に統一する。STYLE は 'kuten（、。）または 'comma（，．）。
+リージョンがあればその範囲、なければバッファ全体が対象。"
+  (interactive
+   (list (intern (completing-read "句読点: " '("kuten" "comma") nil t))
+         (if (use-region-p) (region-beginning) (point-min))
+         (if (use-region-p) (region-end) (point-max))))
+  (let ((pairs (if (eq style 'kuten)
+                   '(("，" . "、") ("．" . "。"))
+                 '(("、" . "，") ("。" . "．"))))
+        (count 0))
+    (save-excursion
+      (dolist (pair pairs)
+        (goto-char (or beg (point-min)))
+        (while (search-forward (car pair) end t)
+          (replace-match (cdr pair) t t)
+          (setq count (1+ count)))))
+    (message "句読点を %d 箇所置換しました。" count)))
+
+;; --- 4. 文字数を数える（リージョンがなければバッファ全体） ---
+(defun my/count-characters ()
+  "文字数・行数を表示する。リージョンがあればその範囲。"
+  (interactive)
+  (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
+         (end (if (use-region-p) (region-end) (point-max))))
+    (message "%d 文字 / %d 行%s"
+             (- end beg)
+             (count-lines beg end)
+             (if (use-region-p) "（選択範囲）" "（バッファ全体）"))))
+
+;; --- 5. リーダーキー C-; j （Japanese/文章）に登録 ---
+(defvar-keymap tk-leader-ja-map
+  :doc "日本語の文章編集"
+  "p" #'my/japanese-punctuation   ; [p]unctuation: 句読点の統一
+  "c" #'my/count-characters       ; [c]ount: 文字数
+  "w" #'whitespace-mode)          ; [w]hitespace: 空白の表示切替
+(keymap-set tk-leader-map "j" tk-leader-ja-map)
+
+(with-eval-after-load 'which-key
+  (which-key-add-keymap-based-replacements tk-leader-map
+    "j" "日本語・文章"))
 #+end_src
 
 * 見た目
