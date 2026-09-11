@@ -127,6 +127,7 @@
 | キー            | 機能                                    | 設定場所              |
 |-----------------+-----------------------------------------+-----------------------|
 | C-;             | リーダーキー（下記サブメニュー）        | キー操作              |
+| C-; j l         | textlint で校正                         | 日本語の文章編集      |
 | C-; j p/c/w     | 句読点の統一 / 文字数 / 空白表示        | 日本語の文章編集      |
 | C-; e p/o/h     | PDF出力 / PDF出力して開く / HTML出力    | Org → PDF 出力       |
 | C-; n n/u/r/G   | Elfeed 起動 / 更新 / 再読込 / 再取得    | ツール > RSS          |
@@ -276,6 +277,63 @@
 (with-eval-after-load 'which-key
   (which-key-add-keymap-based-replacements tk-leader-map
     "j" "日本語・文章"))
+#+end_src
+
+** 校正 (textlint)
+Node の textlint で日本語を校正する。設定は =textlint/= 以下（.textlintrc.json と prh.yml）。
+初回のみ =cd ~/.emacs.d/textlint && npm install= が必要。
+#+begin_src elisp
+(defvar my/textlint-directory (expand-file-name "textlint" user-emacs-directory)
+  "textlint の設定と node_modules を置くディレクトリ。")
+
+(defun my/textlint-executable ()
+  "textlint の実行ファイルのパス。無ければ nil。"
+  (let ((exe (expand-file-name "node_modules/.bin/textlint" my/textlint-directory)))
+    (and (file-executable-p exe) exe)))
+
+(defun my/textlint ()
+  "現在のバッファ（リージョンがあればその範囲）を textlint で校正する。
+結果は *textlint* バッファに一覧表示され、行をクリック（または RET）すると
+該当箇所へ飛ぶ。ファイルは保存していなくてよい。"
+  (interactive)
+  (let ((exe (my/textlint-executable)))
+    (unless exe
+      (user-error "textlint が見つかりません。cd %s && npm install を実行してください"
+                  my/textlint-directory))
+    (let* ((beg (if (use-region-p) (region-beginning) (point-min)))
+           (end (if (use-region-p) (region-end) (point-max)))
+           (real-name (or (buffer-file-name) (buffer-name)))
+           ;; textlint は拡張子でパーサを決めるため、.txt として標準入力で渡す
+           ;; （Org の記法も本文として読ませる）。出力のファイル名は後で元に戻す。
+           (fake-name (concat real-name ".txt"))
+           (out (get-buffer-create "*textlint*"))
+           (default-directory (file-name-as-directory my/textlint-directory)))
+      (with-current-buffer out
+        (let ((inhibit-read-only t)) (erase-buffer)))
+      (call-process-region
+       beg end exe nil out nil
+       "--stdin" "--stdin-filename" fake-name
+       "--config" (expand-file-name ".textlintrc.json" my/textlint-directory)
+       "--format" "compact")
+      (with-current-buffer out
+        (let ((inhibit-read-only t))
+          ;; 仮のファイル名を本来のものに戻す（RET でその場所へ飛べるようにする）
+          (goto-char (point-min))
+          (while (search-forward fake-name nil t)
+            (replace-match real-name t t))
+          (goto-char (point-min))
+          (if (re-search-forward "line [0-9]+" nil t)
+              (progn
+                (compilation-mode)
+                (setq-local compilation-error-regexp-alist
+                            '(("^\\(.+?\\): line \\([0-9]+\\), col \\([0-9]+\\)" 1 2 3)))
+                (display-buffer out))
+            (message "textlint: 指摘はありませんでした。")))))))
+
+(with-eval-after-load 'which-key
+  (which-key-add-keymap-based-replacements tk-leader-ja-map
+    "l" "textlint（校正）"))
+(keymap-set tk-leader-ja-map "l" #'my/textlint)
 #+end_src
 
 * 見た目

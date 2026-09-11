@@ -1,0 +1,19 @@
+# 表記ゆれの辞書（prh）。expected に統一したい語、patterns に直したい書き方を書く。
+# 診療や研究で使う語を足していくと、書くほど効いてくる。
+version: 1
+rules:
+  # --- 例: 眼科用語（不要なものは消してよい） ---
+  - expected: 多焦点眼内レンズ
+    patterns:
+      - マルチフォーカルIOL
+      - 多焦点IOL
+  - expected: 眼圧
+    patterns:
+      - 眼内圧
+  # --- 例: 一般的な表記統一 ---
+  - expected: ください
+    patterns:
+      - 下さい        # 「〜してください」は平仮名に統一
+  - expected: とき
+    patterns:
+      - 時に         # 「〜する時に」は平仮名に統一

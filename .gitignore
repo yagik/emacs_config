@@ -14,6 +14,13 @@
 !/custom.el
 # Elfeed のフィード一覧（elfeed-org）
 !/elfeed.org
+# textlint の設定（node_modules は除外）
+!/textlint/
+/textlint/*
+!/textlint/.textlintrc.json
+!/textlint/prh.yml
+!/textlint/package.json
+!/textlint/package-lock.json
 # 自作ライブラリ（lisp/ のうち vba-mode.el だけ追跡）
 !/lisp/
 /lisp/*

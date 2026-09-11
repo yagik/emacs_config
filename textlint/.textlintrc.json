@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "preset-ja-technical-writing": {
+      "sentence-length": { "max": 120 },
+      "no-exclamation-question-mark": false,
+      "ja-no-mixed-period": { "allowPeriodMarks": ["：", "？", "！"] },
+      "max-kanji-continuous-len": { "max": 8 }
+    },
+    "preset-ja-spacing": {
+      "ja-space-between-half-and-full-width": { "space": "never" },
+      "ja-space-around-code": { "before": false, "after": false }
+    },
+    "prh": { "rulePaths": ["./prh.yml"] }
+  }
+}
