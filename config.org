@@ -962,6 +962,7 @@ Node の textlint で日本語を校正する。設定は =textlint/= 以下（.
 ファイル名が変わるとリンクの張り直しが必要になる場合があるため、
 実行前に Git でコミットしておくと安全。"
   (interactive)
+  (require 'denote)   ; 遅延読み込みのため、未読込なら先に読み込む
   (let* ((files (seq-filter
                  (lambda (f)
                    (and (file-regular-p f)
