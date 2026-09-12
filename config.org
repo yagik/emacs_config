@@ -958,6 +958,7 @@ Node の textlint で日本語を校正する。設定は =textlint/= 以下（.
 (defun my/denote-rename-all-using-front-matter ()
   "Denote ディレクトリ内の全ノートを、本文の front matter に合わせて改名する。
 タグやタイトルを本文側で直したあとの一括同期用。件数を示して確認してから実行する。
+1件でエラーが出ても止まらず、最後にエラーの一覧を *denote-rename* に表示する。
 ファイル名が変わるとリンクの張り直しが必要になる場合があるため、
 実行前に Git でコミットしておくと安全。"
   (interactive)
@@ -966,33 +967,35 @@ Node の textlint で日本語を校正する。設定は =textlint/= 以下（.
                    (and (file-regular-p f)
                         (denote-file-is-writable-and-supported-p f)
                         (denote-file-has-identifier-p f)))
-                 (denote-directory-files)))
+                 ;; 第3引数 t でテキストのノートだけに限定する（画像などを除く）
+                 (denote-directory-files nil nil t)))
          (denote-rename-confirmations nil)   ; 1件ずつの確認はしない
-         (denote-save-buffers t))
+         (denote-save-buffers t)
+         (errors nil))
     (when (yes-or-no-p
            (format "%d 件のノートをファイル名と front matter で同期しますか？ "
                    (length files)))
       (let ((denote-used-identifiers (denote--get-all-used-ids)))
         (dolist (file files)
-          (denote-rename-file-using-front-matter file)))
+          (condition-case err
+              (denote-rename-file-using-front-matter file)
+            (error
+             (push (cons file (error-message-string err)) errors)))))
       (denote-update-dired-buffers)
-      (message "%d 件を確認しました（変更が必要なものだけ改名されています）。"
-               (length files)))))
-
-;; ① 横断検索
-(use-package consult-notes
-  :ensure t
-  :after (consult denote)
-  :config (consult-notes-denote-mode)
-  :bind (("C-c n s" . consult-notes)
-         ("C-c n g" . consult-notes-search-in-all-notes)))
-
-;; ② ノート一覧
-(use-package denote-menu
-  :ensure t
-  :after denote
-  :bind ("C-c n m" . list-denotes))
-
+      (if (null errors)
+          (message "%d 件を確認しました（変更が必要なものだけ改名されています）。"
+                   (length files))
+        (with-current-buffer (get-buffer-create "*denote-rename*")
+          (let ((inhibit-read-only t))
+            (erase-buffer)
+            (insert (format "%d 件中 %d 件でエラー\n\n" (length files) (length errors)))
+            (dolist (e (nreverse errors))
+              (insert (format "%s\n  %s\n" (file-name-nondirectory (car e)) (cdr e)))))
+          (goto-char (point-min))
+          (special-mode)
+          (display-buffer (current-buffer)))
+        (message "%d 件を処理し、%d 件でエラーが出ました（*denote-rename* を参照）。"
+                 (length files) (length errors))))))
 #+end_src
 
 ** Babel（コード実行）
