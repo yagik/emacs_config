@@ -1431,6 +1431,33 @@ C-u 付きで呼ぶと、書き出した後にそのファイルを開く。"
          ("C-c i" . osx-dictionary-search-input)))    ; 入力して検索
 
 ;; --- gt (Go Translate) ---
+;; PDF 用の翻訳関数は gt の外（トップレベル）で定義し、実行時に gt を読み込む。
+;; こうしないと「gt を一度使うまで PDF の d キーが効かない」状態になる。
+(defun my/pdf-translate-at-point ()
+  "PDF で選択範囲があればそれを、なければカーソル下の単語を翻訳する。"
+  (interactive)
+  (require 'gt)
+  (require 'gt-engine-google)
+  (require 'gt-render-posframe)
+  (let ((text (if (pdf-view-active-region-p)
+                  (mapconcat 'identity (pdf-view-active-region-text) " ")
+                (thing-at-point 'word t))))
+    (if (not text)
+        (message "翻訳する語が見つかりません。")
+      (let* ((clean-text (replace-regexp-in-string "\n" " " text))
+             ;; 実行時にテキストを保持した translator を作成
+             (temp-translator (gt-translator
+                               :taker (gt-taker :text clean-text :prompt 'disable)
+                               :engines (gt-google-engine)
+                               :render (gt-posframe-pop-render
+                                        :width 80
+                                        :height 20))))
+        (gt-start temp-translator)))))
+
+;; キー割り当ては gt の読み込みを待たずに行う
+(with-eval-after-load 'pdf-view
+  (keymap-set pdf-view-mode-map "d" #'my/pdf-translate-at-point))
+
 (use-package gt
   :ensure t
   :bind (("C-c t" . gt-do-translate))
@@ -1444,28 +1471,7 @@ C-u 付きで呼ぶと、書き出した後にそのファイルを開く。"
         (gt-translator
          :taker   (gt-taker :text 'buffer :pick 'region-or-paragraph :prompt 'disable)
          :engines (gt-google-engine)
-         :render  (gt-buffer-render)))
-
-  ;; PDF用：引数エラー回避のため taker を動的に生成する関数
-  (defun my/pdf-translate-at-point ()
-    "PDFで選択範囲があればそれを、なければカーソル下の単語を翻訳"
-    (interactive)
-    (let ((text (if (pdf-view-active-region-p)
-                    (mapconcat 'identity (pdf-view-active-region-text) " ")
-                  (thing-at-point 'word t))))
-      (when text
-        (let* ((clean-text (replace-regexp-in-string "\n" " " text))
-               ;; 実行時にテキストを保持した translator を作成
-               (temp-translator (gt-translator
-                                 :taker (gt-taker :text clean-text :prompt 'disable)
-                                 :engines (gt-google-engine)
-                                 :render (gt-posframe-pop-render
-					  :width 80
-					  :height 20))))
-          (gt-start temp-translator)))))
-
-  (with-eval-after-load 'pdf-view
-    (define-key pdf-view-mode-map (kbd "d") #'my/pdf-translate-at-point)))
+         :render  (gt-buffer-render))))
 
 #+end_src
 
