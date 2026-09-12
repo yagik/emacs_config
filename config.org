@@ -74,6 +74,30 @@
 
 #+end_src
 
+** ファイルの自動再読み込み (auto-revert)
+外部（Claude やターミナル）でファイルが書き換わったとき、開いているバッファを自動で更新する。
+#+begin_src elisp
+(use-package autorevert
+  :ensure nil
+  :init
+  (global-auto-revert-mode 1)
+  :custom
+  ;; 再読み込みのたびにメッセージを出さない
+  (auto-revert-verbose nil)
+  ;; Dired など、ファイル以外のバッファも更新する
+  (global-auto-revert-non-file-buffers t)
+  ;; 定期的なポーリングをやめ、OS のファイル変更通知を使う（省電力・即時）
+  (auto-revert-avoid-polling t)
+  ;; 通知が使えない場合の確認間隔（秒）
+  (auto-revert-interval 3)
+  ;; Git のブランチ表示なども更新する
+  (auto-revert-check-vc-info t))
+#+end_src
+
+編集中（未保存）のバッファは、勝手に上書きされない。その場合は保存時に
+「ファイルがディスク上で変更されている」と確認を求められるので、
+=M-x diff-buffer-with-file= で違いを見てから判断する。
+
 ** 行番号
 #+begin_src elisp
   ;; 行番号表示に関する設定
