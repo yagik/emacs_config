@@ -157,6 +157,7 @@
 | C-; e w         | Word (.docx) 書き出し（pandoc）         | Org → PDF 出力        |
 | C-; e p/o/h     | PDF出力 / PDF出力して開く / HTML出力    | Org → PDF 出力       |
 | C-; n n/u/r/G   | Elfeed 起動 / 更新 / 再読込 / 再取得    | ツール > RSS          |
+| C-c n r / k     | ファイル名を本文に同期 / タグを付け直す | Org > Denote          |
 | C-c n n/f/s/g/m | Denote 作成 / 開く / 検索 / 全文 / 一覧 | Org > Denote          |
 | C-c l           | org-store-link                          | Org > olivetti        |
 | C-c d / C-c i   | 辞書（カーソル下 / 入力）               | ツール > 翻訳         |
@@ -943,7 +944,40 @@ Node の textlint で日本語を校正する。設定は =textlint/= 以下（.
     (add-to-list 'savehist-additional-variables 'denote-file-history))
   
   :bind (("C-c n n" . denote)
-         ("C-c n f" . denote-open-or-create)))
+         ("C-c n f" . denote-open-or-create)
+         ;; 本文の front matter（#+title: / #+filetags:）に合わせてファイル名を直す
+         ("C-c n r" . denote-rename-file-using-front-matter)
+         ;; 逆に、ファイル名とタグを対話的に付け直す（front matter も一緒に更新される）
+         ("C-c n k" . denote-rename-file-keywords)))
+
+;; Dired で印を付けたファイルをまとめて同期する
+(with-eval-after-load 'dired
+  (keymap-set dired-mode-map "C-c n r"
+              #'denote-dired-rename-marked-files-using-front-matter))
+
+(defun my/denote-rename-all-using-front-matter ()
+  "Denote ディレクトリ内の全ノートを、本文の front matter に合わせて改名する。
+タグやタイトルを本文側で直したあとの一括同期用。件数を示して確認してから実行する。
+ファイル名が変わるとリンクの張り直しが必要になる場合があるため、
+実行前に Git でコミットしておくと安全。"
+  (interactive)
+  (let* ((files (seq-filter
+                 (lambda (f)
+                   (and (file-regular-p f)
+                        (denote-file-is-writable-and-supported-p f)
+                        (denote-file-has-identifier-p f)))
+                 (denote-directory-files)))
+         (denote-rename-confirmations nil)   ; 1件ずつの確認はしない
+         (denote-save-buffers t))
+    (when (yes-or-no-p
+           (format "%d 件のノートをファイル名と front matter で同期しますか？ "
+                   (length files)))
+      (let ((denote-used-identifiers (denote--get-all-used-ids)))
+        (dolist (file files)
+          (denote-rename-file-using-front-matter file)))
+      (denote-update-dired-buffers)
+      (message "%d 件を確認しました（変更が必要なものだけ改名されています）。"
+               (length files)))))
 
 ;; ① 横断検索
 (use-package consult-notes
