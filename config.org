@@ -1516,7 +1516,7 @@ C-u付きなら生成したファイルも開く。"
   (setq gptel-model 'gemini-3.7-flash))
 #+end_src
 ** 論文管理 (citar)
-#+begin_src emacs-lisp
+#+begin_src elisp
 (use-package citar
   :ensure t
   :custom
@@ -1539,9 +1539,8 @@ C-u付きなら生成したファイルも開く。"
   (citar-denote-mode))
 #+end_src
 
-* 今後の検討項目
-** CSL：引用・参考文献の出力
-#+begin_src emacs-lisp
+*** CSL：引用・参考文献の出力
+#+begin_src elisp
 (use-package citeproc
   :ensure t
   :demand t)
@@ -1572,3 +1571,5 @@ C-u付きなら生成したファイルも開く。"
   (advice-add 'citeproc-blt--get-title :around
               #'my/citeproc-preserve-journal-case))
 #+end_src
+
+* 今後の検討項目
