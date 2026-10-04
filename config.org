@@ -1185,6 +1185,34 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 (setq org-export-with-toc nil)
 #+end_src
 
+** 出力後の後処理（.tex 削除・Denote は Desktop へ）
+LaTeX→PDF 出力に成功したら .tex を削除する。
+Denote 配下のファイルから出力した PDF は ~/Desktop へ移動する。
+#+begin_src elisp
+(defun my/after-latex-pdf-export (pdf)
+  "`org-latex-export-to-pdf' の成功後に後処理をする。
+・.tex は常に削除する（失敗時はエラーで止まるので .tex は残る）。
+・Denote 配下のファイルなら、PDF を ~/Desktop へ移動する。
+戻り値を移動後のパスに差し替えるので、C-; e o は Desktop の PDF を開く。"
+  (when (stringp pdf)
+    ;; 1. .tex を削除（全 Org ファイル共通）
+    (let ((tex (concat (file-name-sans-extension pdf) ".tex")))
+      (when (file-exists-p tex) (delete-file tex)))
+    ;; 2. Denote 配下なら PDF を Desktop へ移動
+    (when (and buffer-file-name
+               (require 'denote nil t)
+               (seq-some (lambda (dir)
+                           (string-prefix-p (file-truename dir)
+                                            (file-truename buffer-file-name)))
+                         (denote-directories)))
+      (let ((dest (expand-file-name (file-name-nondirectory pdf) "~/Desktop/")))
+        (rename-file pdf dest t)        ; 同名があれば上書き
+        (setq pdf dest))))
+  pdf)
+
+(advice-add 'org-latex-export-to-pdf :filter-return #'my/after-latex-pdf-export)
+#+end_src
+
 ** Word 書き出し (pandoc)
 Org ファイルを pandoc で .docx に変換する。書式をそろえたい場合は
 =pandoc/reference.docx= を置くと、その見出しスタイル等を使う
