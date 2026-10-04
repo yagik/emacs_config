@@ -1043,12 +1043,18 @@ Node の textlint で日本語を校正する。設定は =textlint/= 以下（.
   ;; -----------------------------------------------------------------
   ;; 1. 日本語用クラスの設定 (bxjsarticle)
   ;;    ja=standard + lualatex オプションで LuaLaTeX 用の和文設定になる
+  ;;    フォント: 和文 = ヒラギノ (jafont=hiragino-pron)
+  ;;              欧文 = 本文 Times New Roman / 見出し Helvetica Neue
+  ;;    フォント指定を [EXTRA] より前に置くので、#+LATEX_HEADER で個別に上書きできる
   ;; -----------------------------------------------------------------
   (add-to-list 'org-latex-classes
                '("bxjsarticle"
-                 "\\documentclass[ja=standard,lualatex,12pt]{bxjsarticle}
+                 "\\documentclass[ja=standard,lualatex,jafont=hiragino-pron,12pt]{bxjsarticle}
                   [DEFAULT-PACKAGES]
                   [PACKAGES]
+                  \\usepackage{fontspec}
+                  \\setmainfont{Times New Roman}
+                  \\setsansfont{Helvetica Neue}
                   [EXTRA]"
                  ("\\section{%s}"       . "\\section*{%s}")
                  ("\\subsection{%s}"    . "\\subsection*{%s}")
