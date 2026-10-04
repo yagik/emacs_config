@@ -1193,25 +1193,33 @@ display-buffer-alist の設定により、PDFは左サイドウィンドウに�
 
 ** 出力後の後処理（.tex 削除・Denote は Desktop へ）
 LaTeX→PDF 出力に成功したら .tex を削除する。
-Denote 配下のファイルから出力した PDF は ~/Desktop へ移動する。
+Denote 配下のファイルから出力した PDF は、ノートのタイトル名にして ~/Desktop へ移動する。
 #+begin_src elisp
 (defun my/after-latex-pdf-export (pdf)
   "`org-latex-export-to-pdf' の成功後に後処理をする。
 ・.tex は常に削除する（失敗時はエラーで止まるので .tex は残る）。
-・Denote 配下のファイルなら、PDF を ~/Desktop へ移動する。
+・Denote 配下のファイルなら、PDF を「タイトル.pdf」にして ~/Desktop へ移動する。
+  タイトルは #+title: の値（取れなければファイル名のタイトル部分）。
 戻り値を移動後のパスに差し替えるので、C-; e o は Desktop の PDF を開く。"
   (when (stringp pdf)
     ;; 1. .tex を削除（全 Org ファイル共通）
     (let ((tex (concat (file-name-sans-extension pdf) ".tex")))
       (when (file-exists-p tex) (delete-file tex)))
-    ;; 2. Denote 配下なら PDF を Desktop へ移動
+    ;; 2. Denote 配下なら PDF を「タイトル.pdf」として Desktop へ移動
     (when (and buffer-file-name
                (require 'denote nil t)
                (seq-some (lambda (dir)
                            (string-prefix-p (file-truename dir)
                                             (file-truename buffer-file-name)))
                          (denote-directories)))
-      (let ((dest (expand-file-name (file-name-nondirectory pdf) "~/Desktop/")))
+      (let* ((title (string-trim
+                     (replace-regexp-in-string
+                      "[/:]" "_"   ; ファイル名に使えない文字を置換
+                      (denote-retrieve-title-or-filename buffer-file-name 'org))))
+             (name  (if (string-empty-p title)
+                        (file-name-nondirectory pdf)   ; タイトルが取れなければ元の名前
+                      (concat title ".pdf")))
+             (dest  (expand-file-name name "~/Desktop/")))
         (rename-file pdf dest t)        ; 同名があれば上書き
         (setq pdf dest))))
   pdf)
