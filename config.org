@@ -1,4 +1,3 @@
-
 #+TITLE: My Emacs config
 #+AUTHOR: Toshi Kasuga
 #+STARTUP: content
@@ -1192,28 +1191,46 @@ Org ファイルを pandoc で .docx に変換する。書式をそろえたい�
 （作り方: =pandoc -o reference.docx --print-default-data-file reference.docx=）。
 #+begin_src elisp
 (defun my/org-export-to-docx (&optional open)
-  "現在の Org ファイルを pandoc で .docx に書き出す。
-C-u 付きで呼ぶと、書き出した後にそのファイルを開く。"
+  "現在のOrgファイルを引用・参考文献付きWordに変換する。
+C-u付きなら生成したファイルも開く。"
   (interactive "P")
   (unless (executable-find "pandoc")
-    (user-error "pandoc が見つかりません（brew install pandoc）"))
+    (user-error "pandocが見つかりません（brew install pandoc）"))
   (unless (buffer-file-name)
-    (user-error "先にファイルとして保存してください"))
+    (user-error "先にOrgファイルを保存してください"))
   (save-buffer)
   (let* ((src (buffer-file-name))
+         (default-directory (file-name-directory src))
          (dst (concat (file-name-sans-extension src) ".docx"))
-         (ref (expand-file-name "pandoc/reference.docx" user-emacs-directory))
-         (args (append (list src "-o" dst "--from=org" "--standalone")
-                       (when (file-exists-p ref)
-                         (list (concat "--reference-doc=" ref)))))
-         (buf (get-buffer-create "*pandoc*")))
-    (with-current-buffer buf (erase-buffer))
+         (bib (expand-file-name
+               "~/Documents/Bibliography/library.bib"))
+         (csl (expand-file-name
+               "~/Documents/Bibliography/styles/ophthalmology-custom.csl"))
+         (ref (expand-file-name
+               "pandoc/reference.docx" user-emacs-directory))
+         (buf (get-buffer-create "*pandoc*"))
+         (args
+          (append
+           (list src "-o" dst "--from=org" "--standalone"
+                 "--citeproc"
+                 "--bibliography" bib
+                 "--csl" csl)
+           (when (file-exists-p ref)
+             (list "--reference-doc" ref)))))
+    (dolist (file (list bib csl))
+      (unless (file-readable-p file)
+        (user-error "ファイルを読み込めません: %s" file)))
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)))
     (if (zerop (apply #'call-process "pandoc" nil buf nil args))
         (progn
-          (message "Word ファイルを書き出しました: %s" dst)
-          (when open (find-file dst)))
+          (message "Wordファイルを生成しました: %s" dst)
+          (when open
+            (find-file dst)))
       (display-buffer buf)
-      (user-error "pandoc の変換に失敗しました（*pandoc* バッファを確認してください）"))))
+      (user-error "Word変換に失敗しました。*pandoc*を確認してください"))))
+
 
 ;; C-; e w : Export to Word
 (keymap-set tk-leader-export-map "w" #'my/org-export-to-docx)
@@ -1503,7 +1520,7 @@ C-u 付きで呼ぶと、書き出した後にそのファイルを開く。"
 (use-package citar
   :ensure t
   :custom
-  (citar-bibliography '("~/Documents/better_bibtex/library.bib"))
+  (citar-bibliography '("~/Documents/Bibliography/library.bib"))
   (citar-library-paths '("~/Zotero/storage"))
   (citar-file-open-functions
    '(("pdf" . find-file))))
@@ -1514,7 +1531,44 @@ C-u 付きで呼ぶと、書き出した後にそのファイルを開く。"
         org-cite-follow-processor 'citar
         org-cite-activate-processor 'citar))
 
-
+(use-package citar-denote
+  :ensure t
+  :demand t
+  :after (:any citar denote)
+  :init
+  (citar-denote-mode))
 #+end_src
 
 * 今後の検討項目
+** CSL：引用・参考文献の出力
+#+begin_src emacs-lisp
+(use-package citeproc
+  :ensure t
+  :demand t)
+
+(require 'oc-csl)
+
+;; Orgの出力時に参照する書誌ファイル
+(setq org-cite-global-bibliography
+      '("~/Documents/Bibliography/library.bib"))
+
+;; CSLスタイルの保存先
+(setq org-cite-csl-styles-dir
+      (expand-file-name "~/Documents/Bibliography/styles/"))
+;; 既定の出力スタイル
+(setq org-cite-export-processors
+      '((t csl "ophthalmology-custom.csl")))
+
+;; 誌名・略誌名の大文字小文字を保持する
+(with-eval-after-load 'citeproc-biblatex
+  (defun my/citeproc-preserve-journal-case
+      (orig-fun field entry &optional with-nocase sent-case)
+    "Preserve capitalization of journal names."
+    (funcall orig-fun field entry with-nocase
+             (if (memq field '(journal journaltitle shortjournal))
+                 nil
+               sent-case)))
+
+  (advice-add 'citeproc-blt--get-title :around
+              #'my/citeproc-preserve-journal-case))
+#+end_src
